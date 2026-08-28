@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/decision_config.schema.json",
+  "title": "PRman decision configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "required_gates",
+    "criteria",
+    "weights",
+    "critical_min",
+    "soft_min",
+    "ready_score",
+    "revise_floor",
+    "ready_uncertainty_max",
+    "abstain_uncertainty",
+    "top_margin_min",
+    "max_context_truncation_ratio",
+    "lcb_uncertainty_weight"
+  ],
+  "properties": {
+    "schema_version": {"const": "prman-decision-config/1.0"},
+    "required_gates": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "criteria": {
+      "const": [
+        "correctness",
+        "task_alignment",
+        "scope",
+        "repository_conventions",
+        "maintainability",
+        "reviewer_effort"
+      ]
+    },
+    "weights": {"$ref": "#/$defs/criteria_numbers"},
+    "critical_min": {"$ref": "#/$defs/criteria_subset"},
+    "soft_min": {"$ref": "#/$defs/criteria_subset"},
+    "ready_score": {"$ref": "#/$defs/probability"},
+    "revise_floor": {"$ref": "#/$defs/probability"},
+    "ready_uncertainty_max": {"$ref": "#/$defs/probability"},
+    "abstain_uncertainty": {"$ref": "#/$defs/probability"},
+    "top_margin_min": {"$ref": "#/$defs/probability"},
+    "max_context_truncation_ratio": {"$ref": "#/$defs/probability"},
+    "lcb_uncertainty_weight": {"type": "number", "minimum": 0}
+  },
+  "$defs": {
+    "probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "criteria_numbers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correctness",
+        "task_alignment",
+        "scope",
+        "repository_conventions",
+        "maintainability",
+        "reviewer_effort"
+      ],
+      "properties": {
+        "correctness": {"$ref": "#/$defs/probability"},
+        "task_alignment": {"$ref": "#/$defs/probability"},
+        "scope": {"$ref": "#/$defs/probability"},
+        "repository_conventions": {"$ref": "#/$defs/probability"},
+        "maintainability": {"$ref": "#/$defs/probability"},
+        "reviewer_effort": {"$ref": "#/$defs/probability"}
+      }
+    },
+    "criteria_subset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "correctness": {"$ref": "#/$defs/probability"},
+        "task_alignment": {"$ref": "#/$defs/probability"},
+        "scope": {"$ref": "#/$defs/probability"},
+        "repository_conventions": {"$ref": "#/$defs/probability"},
+        "maintainability": {"$ref": "#/$defs/probability"},
+        "reviewer_effort": {"$ref": "#/$defs/probability"}
+      }
+    }
+  }
+}

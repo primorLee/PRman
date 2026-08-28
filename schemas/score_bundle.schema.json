@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/score_bundle.schema.json",
+  "title": "PRman score bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidate_id", "request_digest", "provider", "scores"],
+  "properties": {
+    "schema_version": {"const": "prman-score-bundle/1.0"},
+    "candidate_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "request_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "provider_id",
+        "provider_version",
+        "model_revision",
+        "calibrator_version"
+      ],
+      "properties": {
+        "protocol_version": {"const": "prman-scorer-plugin/1.0"},
+        "provider_id": {"type": "string", "minLength": 1},
+        "provider_version": {"type": "string", "minLength": 1},
+        "model_revision": {"type": "string", "minLength": 1},
+        "calibrator_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "scores": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"$ref": "#/$defs/score"}
+    }
+  },
+  "$defs": {
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion",
+        "probability",
+        "uncertainty",
+        "evidence",
+        "actionable_critique",
+        "ood"
+      ],
+      "properties": {
+        "criterion": {
+          "enum": [
+            "correctness",
+            "task_alignment",
+            "scope",
+            "repository_conventions",
+            "maintainability",
+            "reviewer_effort"
+          ]
+        },
+        "probability": {"type": "number", "minimum": 0, "maximum": 1},
+        "uncertainty": {"type": "number", "minimum": 0, "maximum": 1},
+        "evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "actionable_critique": {"type": ["string", "null"]},
+        "ood": {"type": "boolean"}
+      }
+    }
+  }
+}

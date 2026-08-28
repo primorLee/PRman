@@ -1,0 +1,49 @@
+{
+  "schema_version": "prman-scorer-fixture/1.0",
+  "candidates": {
+    "*": {
+      "correctness": {
+        "probability": 0.92,
+        "uncertainty": 0.04,
+        "evidence": ["fixture: tests passed"],
+        "actionable_critique": null,
+        "ood": false
+      },
+      "task_alignment": {
+        "probability": 0.9,
+        "uncertainty": 0.04,
+        "evidence": ["fixture: acceptance criterion matched"],
+        "actionable_critique": null,
+        "ood": false
+      },
+      "scope": {
+        "probability": 0.9,
+        "uncertainty": 0.03,
+        "evidence": ["fixture: one expected file changed"],
+        "actionable_critique": null,
+        "ood": false
+      },
+      "repository_conventions": {
+        "probability": 0.86,
+        "uncertainty": 0.05,
+        "evidence": ["fixture: repository convention matched"],
+        "actionable_critique": null,
+        "ood": false
+      },
+      "maintainability": {
+        "probability": 0.84,
+        "uncertainty": 0.05,
+        "evidence": ["fixture: minimal change"],
+        "actionable_critique": null,
+        "ood": false
+      },
+      "reviewer_effort": {
+        "probability": 0.88,
+        "uncertainty": 0.04,
+        "evidence": ["fixture: small focused diff"],
+        "actionable_critique": null,
+        "ood": false
+      }
+    }
+  }
+}

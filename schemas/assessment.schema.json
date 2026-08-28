@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/assessment.schema.json",
+  "title": "PRman assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mode", "candidates"],
+  "properties": {
+    "schema_version": {"const": "prman-assessment/1.0"},
+    "mode": {"enum": ["single", "compare"]},
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/candidate"}
+    }
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_id", "truncation_ratio", "gates", "scorer_request"],
+      "properties": {
+        "candidate_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "truncation_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+        "gates": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/gate"}
+        },
+        "scorer_request": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "scorer_request.schema.json"}
+          ]
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "recoverable", "code", "evidence", "actionable"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "status": {"enum": ["pass", "fail", "unknown"]},
+        "recoverable": {"type": "boolean"},
+        "code": {"type": "string", "minLength": 1},
+        "evidence": {"type": "object"},
+        "actionable": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

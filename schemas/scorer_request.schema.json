@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/scorer_request.schema.json",
+  "title": "PRman scorer request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidate_id", "payloads"],
+  "properties": {
+    "schema_version": {"const": "prman-scorer-request/1.0"},
+    "candidate_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "payloads": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correctness",
+        "task_alignment",
+        "scope",
+        "repository_conventions",
+        "maintainability",
+        "reviewer_effort"
+      ],
+      "properties": {
+        "correctness": {"$ref": "#/$defs/correctness"},
+        "task_alignment": {"$ref": "#/$defs/task_alignment"},
+        "scope": {"$ref": "#/$defs/scope"},
+        "repository_conventions": {"$ref": "#/$defs/repository_conventions"},
+        "maintainability": {"$ref": "#/$defs/maintainability"},
+        "reviewer_effort": {"$ref": "#/$defs/reviewer_effort"}
+      }
+    }
+  },
+  "$defs": {
+    "correctness": {
+      "type": "object",
+      "required": ["criterion"],
+      "properties": {"criterion": {"const": "correctness"}}
+    },
+    "task_alignment": {
+      "type": "object",
+      "required": ["criterion"],
+      "properties": {"criterion": {"const": "task_alignment"}}
+    },
+    "scope": {
+      "type": "object",
+      "required": ["criterion"],
+      "properties": {"criterion": {"const": "scope"}}
+    },
+    "repository_conventions": {
+      "type": "object",
+      "required": ["criterion"],
+      "properties": {"criterion": {"const": "repository_conventions"}}
+    },
+    "maintainability": {
+      "type": "object",
+      "required": ["criterion"],
+      "properties": {"criterion": {"const": "maintainability"}}
+    },
+    "reviewer_effort": {
+      "type": "object",
+      "required": ["criterion"],
+      "properties": {"criterion": {"const": "reviewer_effort"}}
+    }
+  }
+}

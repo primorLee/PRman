@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/assessment_result.schema.json",
+  "title": "PRman assessment result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "assessment_digest",
+    "decision_config_digest",
+    "provider",
+    "test_only",
+    "evaluations",
+    "selection",
+    "policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "prman-assessment-result/1.0"},
+    "assessment_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decision_config_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provider": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "score_bundle.schema.json#/properties/provider"}
+      ]
+    },
+    "test_only": {"type": "boolean"},
+    "evaluations": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "candidate_id", "margin", "reason"],
+      "properties": {
+        "decision": {"enum": ["ready", "revise", "abstain"]},
+        "candidate_id": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          ]
+        },
+        "margin": {"type": ["number", "null"]},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "policy": {
+      "const": {
+        "human_confirmation_required": true,
+        "draft_only": true,
+        "external_write_authorized": false
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+name: Bug report
+description: Report a reproducible PRman defect
+title: "[Bug] "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+      description: Do not include secrets, private repository content, or raw webhook payloads.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include content digests and redacted local fixture details.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety impact
+      description: State whether this involves authorization, hard gates, scorer isolation, evidence integrity, or data leakage.
+    validations:
+      required: true

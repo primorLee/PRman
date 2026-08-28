@@ -1,0 +1,10 @@
+{
+  "schema_version": "prman-scorer-config/1.0",
+  "provider": "builtin.fixture-json",
+  "options": {
+    "provider_version": "1.0.0",
+    "model_revision": "fixture-not-a-model",
+    "calibrator_version": "fixture-not-calibrated",
+    "fixture_path": "../../examples/scorer-fixture.json"
+  }
+}

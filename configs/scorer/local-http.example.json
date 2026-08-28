@@ -1,0 +1,11 @@
+{
+  "schema_version": "prman-scorer-config/1.0",
+  "provider": "builtin.local-http",
+  "options": {
+    "provider_version": "1.0.0",
+    "model_revision": "PIN_EXACT_MODEL_REVISION",
+    "calibrator_version": "PIN_EXACT_CALIBRATOR_REVISION",
+    "endpoint": "http://127.0.0.1:8081/v1/score",
+    "timeout_seconds": 30
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "prman",
+  "version": "0.1.0",
+  "description": "Evidence-backed readiness decisions for code changes made with Codex",
+  "author": {
+    "name": "PRman contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PRman",
+    "shortDescription": "Score and refine Codex code changes.",
+    "longDescription": "PRman guides Codex through deterministic evidence gates, optional preference scoring, bounded revision, and ready/revise/abstain decisions without replacing the Codex execution environment.",
+    "developerName": "PRman contributors",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Use PRman to evaluate the current code change and decide whether it is ready, revisable, or should abstain."
+  }
+}

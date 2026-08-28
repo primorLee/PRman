@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prman"
+version = "0.1.0"
+description = "Codex-native, scorer-backed readiness decisions for code changes"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Typing :: Typed",
+]
+
+[project.scripts]
+prman = "prman.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.12,<1",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["prman", "prman.scorers"]
+
+[tool.setuptools.package-data]
+prman = ["py.typed"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"skills/prman/scripts/assess.py" = ["E402"]
+"tests/**" = ["S101"]

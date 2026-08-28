@@ -1,0 +1,11 @@
+schema_version: prman-milestones/2.0
+milestones:
+  - id: M0
+    title: Codex-native MVP
+    exit: Skill and Plugin validate; deterministic core, smoke test, and public architecture are complete
+  - id: M1
+    title: Production scorer boundary
+    exit: One external calibrated scorer passes the conformance suite without entering the core package
+  - id: M2
+    title: Plugin release
+    exit: Local installation and representative Codex tasks pass; publication and license decisions are recorded
