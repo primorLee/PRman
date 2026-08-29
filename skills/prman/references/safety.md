@@ -6,6 +6,10 @@ Read this reference immediately before any proposed GitHub mutation.
 - Prepare the exact internal packet defined in `github-workflow.md`, present its simple contribution
   preview, then wait. Confirmation applies only to that repository, base, branch route, initial
   diff, PR text, write list, and the explicitly bounded CI repair envelope.
+- A requested PR count authorizes no GitHub write and is never a batch confirmation. Every PR in a
+  multi-PR session requires its own unchanged packet, preview, and fresh exact response.
+- An active Codex Goal supplies persistence only. It cannot grant GitHub authority, answer a
+  confirmation prompt, broaden tool permissions, or bypass a platform approval.
 - Run the bundled confirmation helper before asking and after the exact response. No authorization
   artifact means no GitHub write. A plain yes/confirm is invalid; require only the short phrase
   `CREATE DRAFT PR OWNER/REPO` displayed by the helper. Never invent, normalize, trim, or reuse the

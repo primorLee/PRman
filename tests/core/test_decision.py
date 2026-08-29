@@ -12,14 +12,14 @@ class DecisionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.decision = MonotoneDecision(decision_config())
 
-    def test_missing_gate_forces_abstain_before_score(self) -> None:
+    def test_missing_adversarial_review_forces_abstain_before_score(self) -> None:
         result = self.decision.aggregate(
-            gates=(gate("scope"), gate("tests")),
+            gates=(gate("scope"), gate("secrets"), gate("tests")),
             score_bundle=score_bundle(),
             truncation_ratio=0,
         )
         self.assertEqual(result.provisional_decision, "abstain")
-        self.assertEqual(result.reasons, ("missing_gate:secrets",))
+        self.assertEqual(result.reasons, ("missing_gate:adversarial_review",))
         self.assertIsNone(result.score)
 
     def test_fatal_gate_dominates_recoverable_gate(self) -> None:
@@ -28,6 +28,7 @@ class DecisionTests(unittest.TestCase):
                 gate("scope", "fail", recoverable=True, code="TOO_WIDE"),
                 gate("secrets", "fail", code="SECRET_FOUND"),
                 gate("tests"),
+                gate("adversarial_review"),
             ),
             score_bundle=score_bundle(),
             truncation_ratio=0,
@@ -37,12 +38,40 @@ class DecisionTests(unittest.TestCase):
 
     def test_unknown_required_gate_forces_abstain(self) -> None:
         result = self.decision.aggregate(
-            gates=(gate("scope"), gate("secrets"), gate("tests", "unknown", code="NOT_RUN")),
+            gates=(
+                gate("scope"),
+                gate("secrets"),
+                gate("tests", "unknown", code="NOT_RUN"),
+                gate("adversarial_review"),
+            ),
             score_bundle=score_bundle(),
             truncation_ratio=0,
         )
         self.assertEqual(result.provisional_decision, "abstain")
         self.assertEqual(result.reasons, ("unknown_gate:tests:NOT_RUN",))
+
+    def test_failed_adversarial_review_blocks_ready(self) -> None:
+        result = self.decision.aggregate(
+            gates=(
+                gate("scope"),
+                gate("secrets"),
+                gate("tests"),
+                gate(
+                    "adversarial_review",
+                    "fail",
+                    recoverable=True,
+                    code="REVIEW_CHANGES_REQUIRED",
+                ),
+            ),
+            score_bundle=score_bundle(),
+            truncation_ratio=0,
+        )
+        self.assertEqual(result.provisional_decision, "revise")
+        self.assertEqual(
+            result.reasons,
+            ("hard_gate:adversarial_review:REVIEW_CHANGES_REQUIRED",),
+        )
+        self.assertIsNone(result.score)
 
     def test_unknown_advisory_gate_does_not_block(self) -> None:
         result = self.decision.aggregate(
@@ -112,6 +141,7 @@ class DecisionTests(unittest.TestCase):
                 gate("scope", "fail", recoverable=True, code="TOO_WIDE"),
                 gate("secrets"),
                 gate("tests"),
+                gate("adversarial_review"),
             ),
             score_bundle=None,
             truncation_ratio=0,
@@ -121,6 +151,7 @@ class DecisionTests(unittest.TestCase):
                 gate("scope", "fail", recoverable=True, code="TOO_WIDE"),
                 gate("secrets"),
                 gate("tests"),
+                gate("adversarial_review"),
             ),
             score_bundle=None,
             truncation_ratio=0,

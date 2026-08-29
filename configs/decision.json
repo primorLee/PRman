@@ -1,6 +1,6 @@
 {
   "schema_version": "prman-decision-config/1.1",
-  "required_gates": ["scope", "secrets", "tests"],
+  "required_gates": ["scope", "secrets", "tests", "adversarial_review"],
   "criteria": [
     "correctness",
     "task_alignment",

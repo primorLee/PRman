@@ -25,7 +25,7 @@
             "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
             "observed_at": "2026-08-29T00:00:00Z",
             "producer": "prman-example",
-            "producer_version": "0.5.0",
+            "producer_version": "0.6.0",
             "summary": "The fixture changes only example.txt.",
             "log_digest": "f0b8ab916e84ea561bfefddd6ebd509deef30cc9d5c90fa15ff8804ef56ea481",
             "command": null,
@@ -43,7 +43,7 @@
             "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
             "observed_at": "2026-08-29T00:00:00Z",
             "producer": "prman-example",
-            "producer_version": "0.5.0",
+            "producer_version": "0.6.0",
             "summary": "The fixture diff contains no credential-like value.",
             "log_digest": "427eb6524b1a1b6585711d12ac601c8fde770495fab2fb68c69ae4f3deac35b3",
             "command": null,
@@ -66,6 +66,24 @@
             "log_digest": "96254336a5b0b2c2667ea89d42f404ecbf57d08384a3b1ae3829c64243134cee",
             "command": ["fixture-test"],
             "exit_code": 0
+          },
+          "actionable": null
+        },
+        {
+          "name": "adversarial_review",
+          "status": "pass",
+          "recoverable": false,
+          "code": "ADVERSARIAL_REVIEW_PASSED",
+          "evidence": {
+            "source": "inspection",
+            "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
+            "observed_at": "2026-08-29T00:00:00Z",
+            "producer": "prman-example",
+            "producer_version": "0.6.0",
+            "summary": "The maintainer-style review found no unresolved objection in the final fixture diff.",
+            "log_digest": "48a4b224e2bcf3995f9bf32aaca43aa3fb8efe5e7e2215461afb83f8c8d350e4",
+            "command": null,
+            "exit_code": null
           },
           "actionable": null
         }

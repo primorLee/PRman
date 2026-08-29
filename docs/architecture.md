@@ -3,29 +3,58 @@
 ## Decision
 
 PRman is a contribution workflow Skill distributed as a Plugin for ordinary developers who want to
-make a useful pull request to a well-known open-source project. Codex remains the only coding and
-tool-execution harness.
+make one or more useful pull requests to well-known open-source projects. Codex remains the only
+coding and tool-execution harness.
 
 The product boundary is “PRman directs; Codex acts.” PRman defines repository selection, workflow
-state, evidence requirements, human confirmation, allowed GitHub writes, and CI stopping rules.
-Codex searches GitHub, reads and edits repositories, runs commands, and invokes its connected GitHub
-tools. PRman does not duplicate the model, shell, sandbox, Git client, GitHub client, credential
-store, or background worker.
+state, Goal completion criteria, evidence requirements, human confirmation, allowed GitHub writes,
+and CI stopping rules. Codex owns Goal state, searches GitHub, reads and edits repositories, runs
+commands, and invokes its connected GitHub tools. PRman does not duplicate the model, shell,
+sandbox, Git client, GitHub client, credential store, or background worker.
 
 ## Components
 
 ### User goal and authorization
 
-The first request defines repository and task criteria. A broad request uses safe defaults rather
-than requiring the developer to supply search filters. It authorizes read-only discovery and local
-implementation, but never serves as the final GitHub-write approval. Publication authority is
-granted only after the user sees and confirms the post-implementation contribution preview.
+Intake first determines the requested positive PR count and whether the developer supplied a
+repository and Issue. If no target is supplied, PRman asks for a technical direction and minimum
+Star count instead of silently choosing them or requiring GitHub search syntax. This intake
+authorizes read-only discovery and local implementation, but neither the initial request nor the PR
+count serves as GitHub-write approval. Publication authority is granted separately for each PR only
+after the user sees and confirms its post-implementation contribution preview.
+
+### Codex Goal lifecycle
+
+After intake is complete, the Skill checks the current task's Goal state. If no unfinished Goal
+exists and Goal tools are available, it creates one automatically from the exact PR count, fixed
+targets or discovery preferences, quality constraints, per-PR confirmation boundary, verification
+requirements, CI follow-up, and early-stop rule. It reuses an existing Goal that already covers the
+same session and does not replace an unrelated unfinished Goal. No token budget is inferred.
+
+The Goal keeps safe in-scope work moving across discovery, implementation, tests, challenge review,
+assessment, CI follow-up, and later contributions. Status updates do not stop it. A contribution
+preview is a waiting checkpoint, not Goal completion; the same Goal resumes after the exact user
+response. The requested count, qualifying Draft PRs with reported CI, user cancellation, and an
+exhausted high-quality search define completion.
+
+Goal state is owned by Codex rather than the Python package or PRman JSON contracts. Starting a Goal
+does not broaden the sandbox, tool access, approval policy, repository scope, or GitHub authority.
+It cannot infer a confirmation response or turn the requested count into batch write permission.
+
+### Sequential contribution session
+
+The requested count is a maximum session goal. PRman holds only one active contribution cycle at a
+time and records temporary progress: requested count, completed Draft PRs, current target, and stop
+reason. After CI follow-up for one PR, it searches for the next target and repeats the full workflow.
+It stops early when no suitable target remains rather than generating filler work. There is no batch
+confirmation: every PR has a new exact packet, preview, and user response.
 
 ### Read-only discovery
 
-The Skill directs Codex to search for a small number of relevant repositories and issues, reject
-unsuitable or duplicate work, and select one contribution-friendly target. By default it prefers a
-recognised, actively maintained project with evidence that outside PRs are reviewed. It checks
+The Skill directs Codex to search for a small number of relevant repositories and issues for the
+next contribution, reject unsuitable or duplicate work, and select one contribution-friendly
+target. By default it prefers a recognised, actively maintained project with evidence that outside
+PRs are reviewed. It checks
 activity, issue clarity, assignment and existing-PR state, contribution rules, security policy,
 licensing, verification feasibility, default branch, and full base commit.
 
@@ -38,6 +67,15 @@ Codex obtains a working copy, follows applicable AGENTS and repository instructi
 smallest task-complete edit, and runs the target repository's relevant checks. PRman does not wrap or
 reimplement those native capabilities.
 
+### Adversarial maintainer review
+
+After repository checks, Codex makes a distinct second pass over the exact final diff as a skeptical
+maintainer trying to reject it. The pass checks issue coverage, edge cases, regressions, test
+strength, repository conventions, accidental scope, duplicate work, low-value drive-by behavior,
+and the strongest likely maintainer objection. Credible findings cause another edit, verification,
+and complete review. The retained review evidence is bound to the candidate digest. This is
+structured self-review by Codex, not independent human approval.
+
 ### Deterministic quality core
 
 The existing Python helper validates JSON, binds repository/base/task context, recomputes each
@@ -46,9 +84,11 @@ request, calls a configured scorer, and aggregates the result. It has no reposit
 and no GitHub client. Its runtime uses only the Python standard library.
 
 Required gates are evaluated before scoring and cannot be overridden by a high model score. The
-default required gates are scope, secrets, and tests. Extra gates are advisory. Eligible production
-readiness requires criterion minima, raw and lower-confidence-bound thresholds, acceptable
-uncertainty and truncation, exact scorer metadata binding, and a verified canonical evidence HMAC.
+default required gates are scope, secrets, tests, and adversarial review. Passing adversarial review
+requires inspection or service evidence bound to the final candidate. Extra gates are advisory.
+Eligible production readiness requires criterion minima, raw and lower-confidence-bound thresholds,
+acceptable uncertainty and truncation, exact scorer metadata binding, and a verified canonical
+evidence HMAC.
 
 ### Contribution preview and internal confirmation packet
 
@@ -57,6 +97,7 @@ After the final diff is verified and assessed, the Skill prepares a packet conta
 - exact repository, selected task, base commit, base and head branches, and fork route;
 - exact embedded patch, digest, changed files, and summary;
 - every relevant command result;
+- the candidate-bound adversarial-review result, strongest objection, resolution, and note digest;
 - ready, revise, or abstain plus scorer and attestation state;
 - Draft PR title and body;
 - the complete external-write list and bounded CI repair policy.
@@ -99,19 +140,23 @@ passing CI reaches complete.
 
 ## State flow
 
-1. Intake: normalize the user's goal and fixed constraints.
-2. Discover: search GitHub read-only and shortlist suitable work.
-3. Select: choose one target and record why.
-4. Inspect: load repository rules, task context, base commit, and CI expectations.
-5. Implement: let Codex edit locally and collect observed verification evidence.
-6. Assess: run deterministic gates and optional scoring; revise at most twice by default.
-7. Confirm: display the simple contribution preview and stop for the user's short answer.
-8. Publish: perform only the confirmed fork, branch, push, and Draft PR operations.
-9. Follow CI: inspect checks and perform bounded in-scope repairs.
-10. Report: return the Draft PR URL, head commit, CI state, assessment, and remaining human work.
+1. Intake: collect target or direction, minimum Stars, and requested PR count.
+2. Goal: automatically create or reuse the session Goal without treating it as authorization.
+3. Discover: search GitHub read-only for the next suitable contribution.
+4. Select: choose one high-value target and record why.
+5. Inspect: load repository rules, task context, base commit, and CI expectations.
+6. Implement: let Codex edit locally and collect observed verification evidence.
+7. Challenge-review: try to reject the final diff and resolve credible findings.
+8. Assess: run deterministic gates and optional scoring; revise at most twice by default.
+9. Confirm: display the simple contribution preview and wait for a fresh short answer.
+10. Publish: perform only the confirmed fork, branch, push, and Draft PR operations.
+11. Follow CI: inspect checks and perform bounded in-scope repairs.
+12. Report or repeat: report progress and, if the requested count remains, return to discovery.
 
-Any edit after assessment returns to Verify and Assess. Any material scope or publication-plan
-change returns to Confirm. A denied or missing confirmation terminates with a local handoff.
+Any edit after review or assessment returns to Verify, Challenge-review, and Assess. Any material
+scope or publication-plan change returns to Confirm. A denied confirmation terminates with a local
+handoff; a pending confirmation leaves the Goal active at that checkpoint. Confirmation and state
+from one PR never carry into the next cycle.
 
 ## Abstention behavior
 

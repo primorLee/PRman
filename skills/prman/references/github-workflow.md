@@ -11,6 +11,8 @@ Before any GitHub mutation, create one self-contained packet matching the
 - full base commit, base branch, head repository, head branch, and whether a fork is required;
 - the exact embedded final diff, its SHA-256 digest, and changed files;
 - every relevant verification command and whether it passed, failed, or could not run;
+- a `verification` record for the final adversarial review whose summary names the strongest
+  maintainer objection and how it was resolved, with the retained review-note digest;
 - PRman decision (`ready`, `revise`, or `abstain`), reason, scorer/test-only state, and evidence
   attestation state;
 - proposed Draft PR title and full body;
@@ -39,6 +41,7 @@ Before asking, show a compact contribution preview with:
 - one sentence explaining why it is a good contribution target;
 - changed files and a plain-language summary;
 - tests run and their result;
+- the skeptical maintainer-style review result in one plain sentence;
 - any risk, unverified item, or automatic-quality-score limitation;
 - proposed Draft PR title and a reviewable full diff;
 - a short statement that confirmation will allow a fork if needed, a contribution branch, a Draft
@@ -59,6 +62,10 @@ override must name that exact failure.
 
 If confirmation is denied, ambiguous, or absent, stop with the local diff and test results. Do not
 retry the prompt or perform a smaller write.
+
+When a session Goal is active, waiting for this response is a normal checkpoint: keep the Goal
+active rather than completing it. After an exact response, resume from the unchanged packet instead
+of asking whether to continue. Goal mode never supplies, infers, or reuses the response.
 
 After an exact response, create the scoped authorization using the digest returned by `prepare`:
 
@@ -127,7 +134,8 @@ Monitoring checks and reading logs are read-only. When CI fails:
 3. Make a repair only when it is directly required by the confirmed task and fits the packet's CI
    budget.
 4. Before editing, consume one repair round with `workflow begin-repair`.
-5. Rerun relevant local verification, recompute the diff digest, and run PRman assessment again.
+5. Rerun relevant local verification, redo the adversarial maintainer review, recompute the diff
+   digest, and run PRman assessment again.
 6. Add a normal commit to the same head branch and verify the Draft PR updated. Never rewrite
    history or force-push.
 7. Record the newly assessed digest and head commit with `workflow record-update --in-scope`.
@@ -155,3 +163,9 @@ comment or review response are outside the CI authorization unless explicitly in
 Return the Draft PR URL and number, exact head commit, current CI status, final PRman decision,
 verification summary, number of repair rounds, and any action still required from the user or
 maintainer. Never describe a Draft PR as merged or production-ready.
+
+If the intake requested more PRs, update the temporary session progress after this report and begin
+the next read-only discovery cycle. The earlier confirmation authorizes only the PR whose exact
+packet was previewed; prepare a new packet and obtain a fresh confirmation for every later PR. Stop
+early instead of lowering the value bar when no suitable next issue can be found. Keep the session
+Goal active until the requested count or its documented early-stop condition has been reached.

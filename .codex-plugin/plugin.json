@@ -1,6 +1,6 @@
 {
   "name": "prman",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Help developers contribute to well-known open-source projects with Codex",
   "author": {
     "name": "PRman contributors"
@@ -17,8 +17,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "PRman",
-    "shortDescription": "Contribute to popular repos.",
-    "longDescription": "PRman helps an ordinary developer make one useful contribution to a well-known open-source project. It finds a suitable issue, lets Codex implement and test the change, shows a simple preview, asks for one short confirmation, creates a Draft PR, and follows CI. Detailed quality and safety checks stay in the background.",
+    "shortDescription": "Meaningful PRs, one at a time.",
+    "longDescription": "PRman asks how many PRs an ordinary developer wants and for a target or contribution preferences, then automatically starts a Codex Goal and handles meaningful open-source contributions one at a time. It rejects low-value drive-by work, finds a suitable issue, lets Codex implement and test the change, challenge-reviews the final diff, shows a simple preview, asks for a separate confirmation, creates a Draft PR, follows CI, and repeats until the requested count is reached.",
     "developerName": "PRman contributors",
     "category": "Productivity",
     "capabilities": [
@@ -26,8 +26,8 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Help me find a small issue in a well-known Python project, fix it, test it, and ask me before creating a Draft PR.",
-      "Help me contribute this fix to the project, show me a simple preview, then ask before creating a Draft PR."
+      "Find one meaningful Python issue and use a Goal to finish it, test it, review it, then ask before a Draft PR.",
+      "Help me fix this GitHub issue, test and challenge-review the change, then ask before creating a Draft PR."
     ]
   }
 }

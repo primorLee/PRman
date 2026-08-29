@@ -64,6 +64,8 @@ def gate(
     candidate_id: str = CANDIDATE_ID,
 ) -> GateResult:
     source = "command" if name == "tests" and status == "pass" else "inspection"
+    if name == "adversarial_review" and status == "pass" and code == "PASS":
+        code = "ADVERSARIAL_REVIEW_PASSED"
     return GateResult(
         name=name,
         status=status,
@@ -89,6 +91,7 @@ def required_gates(*, candidate_id: str = CANDIDATE_ID) -> tuple[GateResult, ...
         gate("scope", candidate_id=candidate_id),
         gate("secrets", candidate_id=candidate_id),
         gate("tests", candidate_id=candidate_id),
+        gate("adversarial_review", candidate_id=candidate_id),
     )
 
 

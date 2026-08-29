@@ -1,7 +1,7 @@
 interface:
   display_name: "PRman"
   short_description: "Contribute to well-known open-source projects"
-  default_prompt: "Use $prman to find a small issue in a well-known project, implement and test the fix, show a simple preview, then ask before creating a Draft PR."
+  default_prompt: "Use $prman to collect my PR count and target preferences, automatically start a Goal, then complete each meaningful contribution sequentially with a separate preview and confirmation."
 dependencies:
   tools:
     - type: "mcp"

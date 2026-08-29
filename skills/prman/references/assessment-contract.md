@@ -85,11 +85,14 @@ Every gate evidence record must contain:
 - a non-empty argument array plus integer exit code for command evidence, otherwise nulls.
 
 A passing command gate requires exit code zero. A passing `tests` gate specifically requires command
-evidence. A recoverable failure requires non-empty actionable advice.
+evidence. A passing `adversarial_review` gate requires code `ADVERSARIAL_REVIEW_PASSED` plus
+inspection or service evidence tied to the exact final diff; command-only evidence cannot establish
+a skeptical semantic review. A recoverable failure requires non-empty actionable advice.
 
-The default decision profile makes `scope`, `secrets`, and `tests` blocking. Missing or unknown
-required gates force `abstain`; fatal required failures force `abstain`; recoverable required
-failures may return `revise`. Other supplied gates are advisory and do not block selection.
+The default decision profile makes `scope`, `secrets`, `tests`, and `adversarial_review` blocking.
+Missing or unknown required gates force `abstain`; fatal required failures force `abstain`;
+recoverable required failures may return `revise`. Other supplied gates are advisory and do not
+block selection.
 
 Never mark an unavailable or skipped command as `pass`. Use `unknown` and explain the missing
 evidence. Recompute the diff and rerun applicable evidence after every edit; old evidence will fail

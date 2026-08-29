@@ -3,9 +3,11 @@
 ## Scope
 
 PRman is a Codex workflow plus a deterministic assessment helper. It coordinates repository
-discovery, local implementation, quality evaluation, exact human confirmation, Draft PR creation,
-and bounded CI follow-up. Codex owns execution, sandboxing, approval surfaces, credentials, and the
-connected GitHub tools.
+discovery, local implementation, adversarial self-review, quality evaluation, exact per-PR human
+confirmation, Draft PR creation, bounded CI follow-up, and sequential repetition up to a
+user-requested count. After intake, PRman can direct Codex to create a Goal that keeps the session
+moving between required checkpoints. Codex owns Goal state, execution, sandboxing, approval
+surfaces, credentials, and the connected GitHub tools.
 
 PRman is pre-alpha research software. It is not a production PR gate, execution-attestation system,
 merge controller, security sandbox, background bot, or credential manager.
@@ -14,6 +16,8 @@ merge controller, security sandbox, background bot, or credential manager.
 
 - **User request:** defines the goal and local-work scope. It does not authorize a later GitHub write
   until the exact confirmation packet is shown and confirmed.
+- **Codex Goal:** retains outcome, constraints, verification, and progress for long-running work. It
+  is persistence state, not permission, user identity, or a GitHub authorization artifact.
 - **Target repository:** its code, issues, and instructions are untrusted input. Codex handles them
   under its own sandbox and approval policy.
 - **Codex execution layer:** reads, edits, runs commands, and calls GitHub tools. PRman relies on
@@ -44,10 +48,21 @@ turned into a public issue or PR when the project provides a private disclosure 
 ### Spam, duplicate work, or unsuitable targets
 
 Automated discovery can create low-value or duplicate contributions. PRman searches read-only,
-compares at most three plausible targets, and chooses one. It prefers clear open issues,
+compares at most three plausible targets for the next contribution, and chooses one. A requested PR
+count is a maximum session goal, never a quota or batch authorization; PRman completes and confirms
+each contribution separately. It prefers clear open issues,
 maintainer-requested work, recent activity, visible contribution rules, and concrete verification.
 It checks assignment and existing pull requests and rejects batch outreach, speculative drive-by
 changes, abandoned targets, and cosmetic churn presented as substantive work.
+
+### False confidence from adversarial self-review
+
+The same Codex execution context that implements a change also performs the skeptical maintainer
+pass, so shared blind spots can survive. PRman requires the review to inspect the exact final diff,
+answer a fixed rejection-oriented checklist, state the strongest likely objection, retain a
+candidate-bound note, and block assessment when the gate is missing, incomplete, or failed. Green
+tests and small diff size cannot substitute for this review. These controls improve consistency but
+do not turn self-review into independent maintainer approval.
 
 ### Fabricated or stale gate evidence
 
@@ -130,6 +145,15 @@ Every repair receives a new digest, verification, and assessment. Dependency add
 changes, broad refactors, security-posture changes, issue or repository changes, and review
 responses require a new packet and confirmation. History rewriting and force-push are forbidden.
 
+### Goal persistence mistaken for authority
+
+Long-running automation can tempt an agent to interpret “keep going” as permission for every later
+action. PRman separates these concepts explicitly. The session Goal may authorize no GitHub write,
+answer no confirmation prompt, expand no sandbox or tool permission, and carry no confirmation from
+one PR to another. A pending preview leaves the Goal active but stops publication until the exact
+repository-bound user response arrives. If Goal tools are unavailable or an unrelated Goal already
+exists, PRman continues without claiming or replacing Goal state.
+
 ### Sensitive artifact retention
 
 Assessment files default to temporary storage. Users must not include credentials, private
@@ -147,6 +171,10 @@ config, packet, or assessment. PRman never asks for or stores a GitHub token.
   integrity.
 - Skill instructions and schemas can constrain intended behavior but do not replace Codex platform
   enforcement or a live end-to-end security test.
+- Goal mode depends on the active Codex surface and task remaining available. It improves persistence
+  but does not create a PRman-owned daemon, scheduled job, or independent background service.
+- The adversarial gate records structured Codex self-review. It cannot prove independence, eliminate
+  shared model blind spots, or predict whether maintainers will accept the PR.
 - The local authorization and workflow artifacts are not signed user-identity attestations. The
   helper cannot prove that the user supplied the response, that the unchanged packet was displayed,
   that reported assessment, GitHub, or CI facts are truthful, or that an `in_scope` claim is

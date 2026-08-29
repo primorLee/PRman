@@ -187,6 +187,25 @@
         {
           "if": {
             "properties": {
+              "name": {"const": "adversarial_review"},
+              "status": {"const": "pass"}
+            },
+            "required": ["name", "status"]
+          },
+          "then": {
+            "properties": {
+              "code": {"const": "ADVERSARIAL_REVIEW_PASSED"},
+              "evidence": {
+                "properties": {
+                  "source": {"enum": ["inspection", "service"]}
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
               "status": {"const": "pass"},
               "evidence": {"properties": {"source": {"const": "command"}}}
             },

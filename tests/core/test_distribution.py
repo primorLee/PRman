@@ -37,7 +37,7 @@ class DistributionTests(unittest.TestCase):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "prman")
         self.assertEqual(manifest["skills"], "./skills/")
-        self.assertEqual(manifest["version"], "0.5.0")
+        self.assertEqual(manifest["version"], "0.6.0")
         self.assertIn("Write", manifest["interface"]["capabilities"])
         self.assertLessEqual(len(manifest["interface"]["shortDescription"]), 30)
         prompts = manifest["interface"]["defaultPrompt"]
@@ -73,15 +73,26 @@ class DistributionTests(unittest.TestCase):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(project["project"]["version"], manifest["version"])
 
+    def test_default_decision_requires_adversarial_review(self) -> None:
+        self.assertEqual(
+            decision_config().required_gates,
+            ("scope", "secrets", "tests", "adversarial_review"),
+        )
+
     def test_skill_has_no_scaffold_placeholders(self) -> None:
         skill = (ROOT / "skills" / "prman" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: prman", skill)
         self.assertNotIn("[TODO:", skill)
+        self.assertIn("how many PRs they want", skill)
+        self.assertIn("Multiple-PR sessions", skill)
+        self.assertIn("references/goal-mode.md", skill)
 
         linked_references = set(re.findall(r"\]\((references/[^)]+)\)", skill))
         required_references = {
             "references/assessment-contract.md",
+            "references/adversarial-review.md",
             "references/github-workflow.md",
+            "references/goal-mode.md",
             "references/orchestration.md",
             "references/safety.md",
             "references/scorer-contract.md",
@@ -90,6 +101,17 @@ class DistributionTests(unittest.TestCase):
         for reference in linked_references:
             with self.subTest(reference=reference):
                 self.assertTrue((ROOT / "skills" / "prman" / reference).is_file())
+
+    def test_goal_mode_keeps_persistence_separate_from_write_authority(self) -> None:
+        goal_mode = (ROOT / "skills" / "prman" / "references" / "goal-mode.md").read_text(
+            encoding="utf-8"
+        )
+        for tool_name in ("get_goal", "create_goal", "update_goal"):
+            with self.subTest(tool_name=tool_name):
+                self.assertIn(f"`{tool_name}`", goal_mode)
+        self.assertIn("Do not set `token_budget`", goal_mode)
+        self.assertIn("A Goal provides persistence, not permission.", goal_mode)
+        self.assertIn("CREATE DRAFT PR OWNER/REPO", goal_mode)
 
     def test_confirmation_packet_contract_is_draft_only_and_bounded(self) -> None:
         schema = json.loads(
@@ -241,6 +263,39 @@ class DistributionTests(unittest.TestCase):
             validator.validate(value)
         with self.assertRaises(ContractError):
             GateResult.from_dict(gate)
+
+    def test_schema_and_runtime_both_reject_invalid_adversarial_review_pass(self) -> None:
+        value = json.loads((ROOT / "examples" / "assessment.json").read_text(encoding="utf-8"))
+        review_index, review = next(
+            (index, gate)
+            for index, gate in enumerate(value["candidates"][0]["gates"])
+            if gate["name"] == "adversarial_review"
+        )
+        schemas = _schemas()
+        validator = Draft202012Validator(
+            schemas["assessment.schema.json"],
+            registry=_registry(schemas),
+            format_checker=FormatChecker(),
+        )
+
+        invalid_reviews = []
+        wrong_code = copy.deepcopy(review)
+        wrong_code["code"] = "PASS"
+        invalid_reviews.append(wrong_code)
+
+        command_only = copy.deepcopy(review)
+        command_only["evidence"].update(
+            {"source": "command", "command": ["review-script"], "exit_code": 0}
+        )
+        invalid_reviews.append(command_only)
+
+        for invalid_review in invalid_reviews:
+            invalid_assessment = copy.deepcopy(value)
+            invalid_assessment["candidates"][0]["gates"][review_index] = invalid_review
+            with self.subTest(code=invalid_review["code"]), self.assertRaises(ValidationError):
+                validator.validate(invalid_assessment)
+            with self.assertRaises(ContractError):
+                Assessment.from_dict(invalid_assessment)
 
     def test_schema_and_runtime_both_reject_duplicate_score_criteria(self) -> None:
         value = score_bundle().as_dict()

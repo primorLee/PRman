@@ -17,11 +17,13 @@ from helpers import (
     TASK_DIGEST,
     TEST_PROVIDER,
     decision_config,
+    gate,
     required_gates,
     score_bundle,
 )
 
 from prman.assessment import Assessment, AssessmentEngine
+from prman.models import GateResult
 from prman.scorers.builtin import StaticScorer
 from prman.validation import ContractError, canonical_json_bytes, sha256_text
 
@@ -90,6 +92,24 @@ class AssessmentTests(unittest.TestCase):
         value["candidates"][0]["gates"][0]["evidence"]["candidate_id"] = "b" * 64
         with self.assertRaisesRegex(ContractError, "evidence candidate_id mismatch"):
             Assessment.from_dict(value)
+
+    def test_passing_adversarial_review_rejects_command_only_evidence(self) -> None:
+        value = gate("adversarial_review").as_dict()
+        value["evidence"].update(
+            {
+                "source": "command",
+                "command": ["review-script"],
+                "exit_code": 0,
+            }
+        )
+        with self.assertRaisesRegex(ContractError, "inspection or service"):
+            GateResult.from_dict(value, path="gate")
+
+    def test_passing_adversarial_review_rejects_generic_pass_code(self) -> None:
+        value = gate("adversarial_review").as_dict()
+        value["code"] = "PASS"
+        with self.assertRaisesRegex(ContractError, "ADVERSARIAL_REVIEW_PASSED"):
+            GateResult.from_dict(value, path="gate")
 
     def test_task_digest_must_hash_shared_task(self) -> None:
         value = assessment_value()

@@ -143,6 +143,15 @@ class GateResult:
             raise ContractError(f"gate {self.name}: passing command evidence requires exit_code 0")
         if self.name == "tests" and self.status == "pass" and self.evidence.source != "command":
             raise ContractError("gate tests: pass requires command evidence")
+        if self.name == "adversarial_review" and self.status == "pass":
+            if self.code != "ADVERSARIAL_REVIEW_PASSED":
+                raise ContractError(
+                    "gate adversarial_review: pass requires code ADVERSARIAL_REVIEW_PASSED"
+                )
+            if self.evidence.source not in {"inspection", "service"}:
+                raise ContractError(
+                    "gate adversarial_review: pass requires inspection or service evidence"
+                )
 
     def validate_candidate(self, candidate_id: str) -> None:
         if self.evidence.candidate_id != candidate_id:
