@@ -72,8 +72,10 @@ with an illustrative [examples/confirmation-packet.json](examples/confirmation-p
 
 ## Current limits
 
-- The full workflow is authored and validated as a Skill, but a clean-install, real-repository,
-  end-to-end Codex run is still release work. Treat this as pre-alpha.
+- Local Plugin installation, explicit and implicit fresh-task discovery, unrelated-question
+  non-triggering, installed helper resolution, and cache-busted reinstall have passed validation.
+  See the [2026-08-30 installation record](docs/plugin-installation-validation-2026-08-30.md).
+  A controlled real-repository Draft PR and CI run is still release work. Treat this as pre-alpha.
 - No production scorer or trusted evidence executor is shipped. The checked-in research profile
   therefore cannot honestly return production ready.
 - When required gates pass but production scoring or attestation is missing, PRman reports abstain.
@@ -118,6 +120,11 @@ documentation for [building skills](https://learn.chatgpt.com/docs/build-skills)
 
 The Python distribution and installed command are both named prman-codex, avoiding the unrelated
 existing PyPI prman project.
+
+The local personal-marketplace install and fresh-task invocation checks are recorded in
+[docs/plugin-installation-validation-2026-08-30.md](docs/plugin-installation-validation-2026-08-30.md).
+That record validates Plugin discovery and routing; it is not evidence of a completed live GitHub
+Draft PR.
 
 ## Development
 

@@ -2,8 +2,9 @@
 
 PRman 0.4.0 is a pre-alpha, end-to-end Draft PR orchestration Skill for Codex. The repository is
 public at primorLee/PRman and licensed under Apache-2.0. The workflow is implemented in the Skill and
-in executable local contracts; clean-install and live GitHub end-to-end validation are still
-required before a release claim.
+in executable local contracts. Local personal-marketplace installation, fresh-task discovery,
+negative routing, installed helper resolution, and cache-busted reinstall passed on 2026-08-30;
+live GitHub end-to-end validation is still required before a production claim.
 
 ## Implemented workflow
 
@@ -72,6 +73,23 @@ is skills/prman/scripts/workflow.py.
 The archived review that motivated the assessment hardening is
 [security-review-2026-08-29.md](security-review-2026-08-29.md).
 
+## Validated Codex installation
+
+The PRM-008 acceptance run installed PRman from the default local `personal` marketplace and
+verified all of the following in ephemeral, read-only Codex tasks started outside this repository:
+
+- Explicit `$prman` invocation loaded version `0.4.0` from the Plugin cache.
+- A request to find a repository, implement a bug fix, and send a PR selected PRman implicitly.
+- A generic Python question did not invoke or mention PRman.
+- The bundled workflow helper resolved from the installed cache and prepared the expected packet.
+- Uninstall and reinstall with `0.4.0+codex.validation-20260830` produced a new cache entry, and a
+  subsequent fresh task reported that exact installed version.
+- Both before and after reinstall, the task rejected a plain yes as write authorization and allowed
+  only an explicitly confirmed Draft PR.
+
+The redacted command transcript and exact validation boundary are in
+[plugin-installation-validation-2026-08-30.md](plugin-installation-validation-2026-08-30.md).
+
 ## Deliberately not implemented
 
 - A second coding model, coding-agent protocol, candidate-generation runtime, or background daemon.
@@ -93,8 +111,6 @@ them; they are workflow records, not a hostile-host security boundary.
 
 ## Remaining release work
 
-- Install or update the Plugin in a clean Codex environment and verify explicit and implicit
-  invocation.
 - Run representative repository-discovery tasks and record target selection quality, duplicate-work
   avoidance, and refusal behavior.
 - Exercise the exact confirmation, denial, stale-packet, abstain-acknowledgement, fork, Draft PR, CI
