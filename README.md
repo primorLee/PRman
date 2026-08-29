@@ -7,11 +7,12 @@ deterministic `ready / revise / abstain` aggregation. It is not a production PR 
 PRman does **not** implement a second coding agent, candidate generator, worktree manager, command
 sandbox, or GitHub client. Those responsibilities stay with Codex and its existing tools.
 
-![PRman inputs, gate checks, scoring, aggregation, decisions, outputs, comparison mode, and architecture overview](docs/assets/prman-overview.png)
+![PRman pipeline from an untrusted target repository through evidence collection, deterministic assessment, authenticated scoring, and human-confirmed external mutation](docs/assets/prman-pipeline-trust-boundaries.png)
 
-_Conceptual overview: scorer labels and ecosystem logos illustrate extension possibilities rather
-than bundled integrations or partnerships. PRman 0.2.0 ships no production scorer or calibrated
-decision profile._
+_Recommended production topology. The repository ships the PRman core and authenticated HTTP client,
+not the pictured trusted evidence executor or production scorer service. Trusted in-process Python
+scorers remain available only through explicit opt-in. See the
+[visual asset status](docs/visual-assets.md) for what is live versus illustrative._
 
 ## Shape of the project
 
@@ -24,7 +25,7 @@ Codex: inspect, edit, run project commands, collect evidence
         v
 $prman skill: prepare a strict assessment
         |
-        +--> optional scorer provider: six calibrated criteria
+        +--> optional scorer provider: six criterion probabilities
         |
         v
 Deterministic core: hard gates + geometric score + uncertainty LCB
@@ -132,7 +133,8 @@ and only a Draft PR is in scope.
 
 See [docs/architecture.md](docs/architecture.md),
 [docs/threat-model.md](docs/threat-model.md), and
-[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
+[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md). Visuals and mockups are cataloged in
+[docs/visual-assets.md](docs/visual-assets.md).
 
 ## Repository map
 
@@ -140,6 +142,7 @@ See [docs/architecture.md](docs/architecture.md),
 - `skills/prman/`: Codex workflow, references, and bundled helper.
 - `src/prman/`: deterministic assessment library and scorer adapters.
 - `configs/`: decision thresholds and scorer configuration examples.
+- `docs/assets/`: public diagrams, brand references, and clearly separated mockups.
 - `schemas/`: public JSON contracts.
 - `examples/`: fixture-only smoke input and scorer output.
 - `tests/core/`: unit, safety, distribution, CLI, and Skill-wrapper tests.
