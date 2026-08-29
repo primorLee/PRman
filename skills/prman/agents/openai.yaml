@@ -1,7 +1,7 @@
 interface:
   display_name: "PRman"
-  short_description: "Find, fix, validate, and draft GitHub PRs"
-  default_prompt: "Use $prman to find a suitable Python issue, implement and validate the fix, then ask before creating a Draft PR."
+  short_description: "Contribute to well-known open-source projects"
+  default_prompt: "Use $prman to find a small issue in a well-known project, implement and test the fix, show a simple preview, then ask before creating a Draft PR."
 dependencies:
   tools:
     - type: "mcp"

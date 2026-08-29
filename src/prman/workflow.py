@@ -130,17 +130,46 @@ def _require_unique_strings(value: Any, *, path: str) -> tuple[str, ...]:
     return result
 
 
-def _confirmation_phrase(
-    repository: str,
-    head_branch: str,
-    decision: AssessmentDecision,
-) -> str:
-    phrase = f"CONFIRM DRAFT PR {repository} {head_branch}"
-    if decision != "ready":
-        phrase += f" ACKNOWLEDGE {decision.upper()}"
+def _confirmation_phrase(repository: str) -> str:
+    phrase = f"CREATE DRAFT PR {repository}"
     if len(phrase) > 200:
         raise ContractError("confirmation.approval.confirmation_phrase exceeds 200 characters")
     return phrase
+
+
+def _confirmation_scope_digest(
+    *,
+    phrase: str,
+    packet_digest: str,
+    repository: str,
+    base_branch: str,
+    base_commit: str,
+    head_repository: str,
+    head_branch: str,
+    diff_sha256: str,
+    assessment_decision: AssessmentDecision,
+    external_writes: tuple[WriteOperation, ...],
+    ci_max_fix_rounds: int,
+    ci_publish_repairs: bool,
+    ci_scope: str,
+) -> str:
+    return canonical_digest(
+        {
+            "phrase": phrase,
+            "packet_digest": packet_digest,
+            "repository": repository,
+            "base": {"branch": base_branch, "commit": base_commit},
+            "head": {"repository": head_repository, "branch": head_branch},
+            "diff_sha256": diff_sha256,
+            "assessment_decision": assessment_decision,
+            "external_writes": list(external_writes),
+            "ci_followup": {
+                "max_fix_rounds": ci_max_fix_rounds,
+                "publish_repairs": ci_publish_repairs,
+                "scope": ci_scope,
+            },
+        }
+    )
 
 
 def _validate_verification(value: Any) -> None:
@@ -188,7 +217,7 @@ class ConfirmationPacket:
     ci_publish_repairs: bool
     ci_scope: str
     confirmation_phrase: str
-    schema_version: str = "prman-confirmation-packet/1.1"
+    schema_version: str = "prman-confirmation-packet/1.2"
 
     @classmethod
     def from_dict(cls, value: Any) -> ConfirmationPacket:
@@ -211,7 +240,7 @@ class ConfirmationPacket:
             },
             path="confirmation",
         )
-        if item["schema_version"] != "prman-confirmation-packet/1.1":
+        if item["schema_version"] != "prman-confirmation-packet/1.2":
             raise ContractError(f"unsupported confirmation packet {item['schema_version']!r}")
 
         repository_value = require_object(item["repository"], path="confirmation.repository")
@@ -394,17 +423,14 @@ class ConfirmationPacket:
         confirmation_phrase = require_string(
             approval["confirmation_phrase"], path="confirmation.approval.confirmation_phrase"
         )
-        expected_phrase = _confirmation_phrase(repository, head_branch, assessment_decision)
+        expected_phrase = _confirmation_phrase(repository)
         if confirmation_phrase != expected_phrase:
             raise ContractError(
                 "confirmation.approval.confirmation_phrase must name the exact Draft PR target"
             )
         if confirmation_phrase not in prompt:
             raise ContractError("confirmation.approval.prompt must show the confirmation phrase")
-        if (
-            assessment_decision != "ready"
-            and f"Assessment result: {assessment_reason}" not in prompt
-        ):
+        if assessment_decision != "ready" and assessment_reason not in prompt:
             raise ContractError(
                 "confirmation.approval.prompt must show the exact non-ready assessment reason"
             )
@@ -429,7 +455,7 @@ class ConfirmationPacket:
 
     def preparation(self) -> dict[str, Any]:
         return {
-            "schema_version": "prman-confirmation-check/1.0",
+            "schema_version": "prman-confirmation-check/1.1",
             "packet_digest": self.packet_digest,
             "repository": self.repository,
             "confirmation_phrase": self.confirmation_phrase,
@@ -456,7 +482,7 @@ class WriteAuthorization:
     ci_max_fix_rounds: int
     ci_publish_repairs: bool
     ci_scope: str
-    schema_version: str = "prman-write-authorization/1.0"
+    schema_version: str = "prman-write-authorization/1.1"
 
     @classmethod
     def from_dict(cls, value: Any) -> WriteAuthorization:
@@ -478,7 +504,7 @@ class WriteAuthorization:
             },
             path="authorization",
         )
-        if item["schema_version"] != "prman-write-authorization/1.0":
+        if item["schema_version"] != "prman-write-authorization/1.1":
             raise ContractError(f"unsupported write authorization {item['schema_version']!r}")
         base = require_object(item["base"], path="authorization.base")
         exact_fields(base, {"branch", "commit"}, path="authorization.base")
@@ -552,8 +578,24 @@ class WriteAuthorization:
             raise ContractError(
                 "authorization.external_writes: update_draft_pr must match the CI repair policy"
             )
-        expected_phrase_digest = sha256_text(
-            _confirmation_phrase(repository, head_branch, assessment_decision)
+        initial_diff_sha256 = require_sha256(
+            item["initial_diff_sha256"], path="authorization.initial_diff_sha256"
+        )
+        ci_scope = require_string(ci["scope"], path="authorization.ci_followup.scope")
+        expected_phrase_digest = _confirmation_scope_digest(
+            phrase=_confirmation_phrase(repository),
+            packet_digest=packet_digest,
+            repository=repository,
+            base_branch=base_branch,
+            base_commit=base_commit,
+            head_repository=head_repository,
+            head_branch=head_branch,
+            diff_sha256=initial_diff_sha256,
+            assessment_decision=assessment_decision,
+            external_writes=writes,
+            ci_max_fix_rounds=ci_max_fix_rounds,
+            ci_publish_repairs=ci_publish_repairs,
+            ci_scope=ci_scope,
         )
         if confirmation_phrase_digest != expected_phrase_digest:
             raise ContractError(
@@ -568,14 +610,12 @@ class WriteAuthorization:
             base_commit=base_commit,
             head_repository=head_repository,
             head_branch=head_branch,
-            initial_diff_sha256=require_sha256(
-                item["initial_diff_sha256"], path="authorization.initial_diff_sha256"
-            ),
+            initial_diff_sha256=initial_diff_sha256,
             assessment_decision=assessment_decision,
             external_writes=writes,
             ci_max_fix_rounds=ci_max_fix_rounds,
             ci_publish_repairs=ci_publish_repairs,
-            ci_scope=require_string(ci["scope"], path="authorization.ci_followup.scope"),
+            ci_scope=ci_scope,
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -656,7 +696,21 @@ def authorize_confirmation(
         raise ContractError("response does not exactly match the confirmation phrase")
     return WriteAuthorization(
         packet_digest=packet.packet_digest,
-        confirmation_phrase_digest=sha256_text(response),
+        confirmation_phrase_digest=_confirmation_scope_digest(
+            phrase=response,
+            packet_digest=packet.packet_digest,
+            repository=packet.repository,
+            base_branch=packet.base_branch,
+            base_commit=packet.base_commit,
+            head_repository=packet.head_repository,
+            head_branch=packet.head_branch,
+            diff_sha256=packet.diff_sha256,
+            assessment_decision=packet.assessment_decision,
+            external_writes=packet.external_writes,
+            ci_max_fix_rounds=packet.ci_max_fix_rounds,
+            ci_publish_repairs=packet.ci_publish_repairs,
+            ci_scope=packet.ci_scope,
+        ),
         repository=packet.repository,
         base_branch=packet.base_branch,
         base_commit=packet.base_commit,

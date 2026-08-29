@@ -13,7 +13,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "prman-confirmation-check/1.0"
+      "const": "prman-confirmation-check/1.1"
     },
     "packet_digest": {
       "type": "string",
@@ -27,7 +27,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 200,
-      "pattern": "^CONFIRM DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ \\S+(?: ACKNOWLEDGE (?:REVISE|ABSTAIN))?$"
+      "pattern": "^CREATE DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
     },
     "policy": {
       "const": {

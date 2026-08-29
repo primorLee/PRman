@@ -79,7 +79,7 @@ class ConfirmationTests(unittest.TestCase):
                     )
                 )
 
-    def test_ready_packet_uses_a_target_phrase_without_an_acknowledgement_suffix(self) -> None:
+    def test_ready_packet_uses_the_same_short_repository_phrase(self) -> None:
         value = confirmation_value()
         value["assessment"] = {
             "decision": "ready",
@@ -89,7 +89,7 @@ class ConfirmationTests(unittest.TestCase):
             "attestation_verified": True,
             "override_acknowledgement_required": False,
         }
-        phrase = "CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config"
+        phrase = "CREATE DRAFT PR octo-org/widget"
         value["approval"] = {
             "status": "pending",
             "prompt": f"Reply exactly ‘{phrase}’ to create this Draft PR.",
@@ -207,10 +207,15 @@ class ConfirmationTests(unittest.TestCase):
         hidden_phrase["approval"]["prompt"] = "Confirm this write."
         invalid_values.append(hidden_phrase)
 
-        short_phrase = copy.deepcopy(confirmation_value())
-        short_phrase["approval"]["prompt"] = "Reply exactly yes."
-        short_phrase["approval"]["confirmation_phrase"] = "yes"
-        invalid_values.append(short_phrase)
+        generic_phrase = copy.deepcopy(confirmation_value())
+        generic_phrase["approval"]["prompt"] = "Reply exactly yes."
+        generic_phrase["approval"]["confirmation_phrase"] = "yes"
+        invalid_values.append(generic_phrase)
+
+        wrong_repository = copy.deepcopy(confirmation_value())
+        wrong_repository["approval"]["prompt"] = "Reply exactly CREATE DRAFT PR other/widget."
+        wrong_repository["approval"]["confirmation_phrase"] = "CREATE DRAFT PR other/widget"
+        invalid_values.append(wrong_repository)
 
         hidden_non_ready_reason = copy.deepcopy(confirmation_value())
         hidden_non_ready_reason["approval"]["prompt"] = (
@@ -237,6 +242,14 @@ class ConfirmationTests(unittest.TestCase):
         default_branch = copy.deepcopy(value)
         default_branch["head"]["branch"] = default_branch["base"]["branch"]
         invalid_values.append(default_branch)
+
+        changed_branch = copy.deepcopy(value)
+        changed_branch["head"]["branch"] = "codex/different-change"
+        invalid_values.append(changed_branch)
+
+        changed_base = copy.deepcopy(value)
+        changed_base["base"]["commit"] = "b" * 40
+        invalid_values.append(changed_base)
 
         missing_fork = copy.deepcopy(value)
         missing_fork["external_writes"].remove("create_fork")

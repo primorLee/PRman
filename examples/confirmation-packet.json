@@ -1,5 +1,5 @@
 {
-  "schema_version": "prman-confirmation-packet/1.1",
+  "schema_version": "prman-confirmation-packet/1.2",
   "repository": {
     "full_name": "octo-org/widget",
     "url": "https://github.com/octo-org/widget",
@@ -39,7 +39,7 @@
   ],
   "assessment": {
     "decision": "abstain",
-    "reason": "Required gates passed, but no production scorer or trusted evidence attestation is configured.",
+    "reason": "Repository checks passed, but PRman's optional extra quality score is unavailable.",
     "scorer": null,
     "test_only": false,
     "attestation_verified": false,
@@ -67,7 +67,7 @@
   },
   "approval": {
     "status": "pending",
-    "prompt": "Assessment result: Required gates passed, but no production scorer or trusted evidence attestation is configured. Reply exactly ‘CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config ACKNOWLEDGE ABSTAIN’ to acknowledge that result, create this Draft PR, and allow up to two in-scope CI repair updates.",
-    "confirmation_phrase": "CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config ACKNOWLEDGE ABSTAIN"
+    "prompt": "Repository checks passed, but PRman's optional extra quality score is unavailable. Reply exactly ‘CREATE DRAFT PR octo-org/widget’ to create this Draft PR and allow up to two same-task CI repair updates.",
+    "confirmation_phrase": "CREATE DRAFT PR octo-org/widget"
   }
 }

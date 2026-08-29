@@ -1,9 +1,8 @@
 # Confirmation, Draft PR, and CI workflow
 
-Read this reference before presenting a GitHub confirmation packet and again after the user
-confirms it.
+Read this reference before presenting a contribution preview and again after the user confirms it.
 
-## Confirmation packet
+## Internal confirmation packet
 
 Before any GitHub mutation, create one self-contained packet matching the
 [confirmation-packet schema](../../../schemas/confirmation_packet.schema.json). It must identify:
@@ -19,7 +18,9 @@ Before any GitHub mutation, create one self-contained packet matching the
 - whether CI will be monitored and the maximum number of in-scope repair rounds (default: two).
 
 Embed the exact UTF-8 patch in the packet. Set its SHA-256 to the digest of those exact bytes. The
-approval object must show a short, target-specific `confirmation_phrase` verbatim inside its prompt.
+approval object must show the short phrase `CREATE DRAFT PR OWNER/REPO` verbatim inside its prompt.
+The packet binds the branch, diff, assessment, PR text, writes, and CI budget even though the user
+does not need to repeat them.
 
 Validate and bind the packet from the skill directory, using temporary output paths:
 
@@ -29,19 +30,32 @@ python3.11 scripts/workflow.py confirmation prepare \
   --output <confirmation-check.json>
 ```
 
-Show the complete packet plus the returned packet digest and confirmation phrase. The check output
-must still say `external_write_authorized: false`.
+Keep the packet, check output, and digest in temporary storage. The check output must still say
+`external_write_authorized: false`.
 
-Ask for confirmation only after displaying these fields. The response must exactly match the shown
-confirmation phrase. Confirmation expires if the target, base commit, initial diff, branch route, PR
-text, planned writes, or CI budget changes before initial publication. After the Draft PR exists,
-only the explicitly confirmed CI repair envelope may change the diff without a new packet.
+Before asking, show a compact contribution preview with:
 
-`ready` is never write authorization. If the decision is `abstain` only because a production scorer
-or trusted attestation is unavailable, the packet may still offer a Draft PR, but it must say that
-quality readiness is unknown and ask the user to acknowledge that uncertainty. Do not present a
-known required-gate failure as this missing-scorer exception. A remaining `revise` or failed required
-gate needs a separate explicit override naming the failure.
+- repository and selected issue or task;
+- one sentence explaining why it is a good contribution target;
+- changed files and a plain-language summary;
+- tests run and their result;
+- any risk, unverified item, or automatic-quality-score limitation;
+- proposed Draft PR title and a reviewable full diff;
+- a short statement that confirmation will allow a fork if needed, a contribution branch, a Draft
+  PR, CI monitoring, and only the stated number of same-task CI repairs.
+
+Do not paste the JSON packet, digest, raw scorer output, or state-machine fields by default. Provide
+them only if the user asks. The response must exactly match the displayed short phrase. Confirmation
+expires if the target, base commit, initial diff, branch route, PR text, planned writes, or CI budget
+changes before initial publication. After the Draft PR exists, only the confirmed CI repair envelope
+may change the diff without a new packet.
+
+`ready` is never write authorization. If the decision is `abstain` only because optional production
+scoring or trusted attestation is unavailable, the preview may still offer a Draft PR, but say in
+plain language that the repository tests passed while an extra automatic quality score is
+unavailable. The confirmation phrase remains the same short repository-bound phrase. Do not offer a
+Draft PR with a known required-gate failure in the default workflow; a separate user-requested
+override must name that exact failure.
 
 If confirmation is denied, ambiguous, or absent, stop with the local diff and test results. Do not
 retry the prompt or perform a smaller write.
@@ -62,10 +76,10 @@ python3.11 scripts/workflow.py workflow begin \
 
 The helper rejects a changed packet, an inexact response, a normal PR, inconsistent branches, a
 `ready` claim missing its required production-scorer or attestation fields, unsupported writes, and
-mismatched CI repair authority. The exact phrase names the repository and head branch; non-ready
-phrases also acknowledge the decision and the prompt must show its exact reason. It records
-user-derived authorization but cannot prove the response actually came from the user or that the
-packet was displayed; Codex must never invent or reuse it.
+mismatched CI repair authority. The exact phrase names the repository; the prompt must also show any
+non-ready reason in understandable language. It records user-derived authorization but cannot prove
+the response actually came from the user or that the preview was displayed; Codex must never invent
+or reuse it.
 
 ## Publish only what was confirmed
 

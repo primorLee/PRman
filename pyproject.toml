@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prman-codex"
-version = "0.4.0"
-description = "Pre-alpha end-to-end Draft PR automation for Codex"
+version = "0.5.0"
+description = "Help developers contribute to well-known open-source projects with Codex"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

@@ -1,130 +1,133 @@
 # PRman
 
-![PRman social cover showing the diff, evidence, scorer, and decision flow](docs/assets/prman-social-preview.png)
+![PRman social cover](docs/assets/prman-social-preview.png)
 
-PRman is a pre-alpha Codex Skill and Plugin for one complete pull-request workflow:
+PRman helps ordinary developers make useful pull requests to well-known open-source projects.
 
-~~~text
-User goal
-   |
-   v
-Read-only GitHub search -> choose one suitable repository and issue
-   |
-   v
-Codex reads the rules -> implements the change -> runs the repository's checks
-   |
-   v
-PRman binds the diff and evidence -> ready / revise / abstain
-   |
-   v
-Exact packet: repository + branches + diff + tests + assessment + PR text
-   |
-   v
-User confirms
-   |
-   v
-Create Draft PR -> follow CI -> make bounded in-scope repairs
-~~~
+You tell Codex what kind of project you want to contribute to. PRman finds one suitable issue,
+Codex makes and tests the change, and you review a simple preview. Nothing is sent to GitHub until
+you confirm it.
 
-PRman is not another coding model. Codex does the searching, reading, editing, command execution, and
-connected GitHub operations. PRman supplies the state machine, quality gate, confirmation boundary,
-and safe order of operations. It stores no GitHub token and never auto-merges.
-
-## What a user can ask
+## What it does
 
 ~~~text
-Use $prman to find an active Python repository with a suitable bug,
-implement and test the fix, then ask me before opening a Draft PR.
+You: “Help me contribute to a well-known Python project.”
+                         |
+                         v
+PRman finds one active project and a small, unclaimed issue
+                         |
+                         v
+Codex reads the project rules, makes the change, and runs the tests
+                         |
+                         v
+PRman shows a simple contribution preview and the full diff
+                         |
+                         v
+You confirm: CREATE DRAFT PR owner/repo
+                         |
+                         v
+PRman creates a Draft PR, follows CI, and reports the result
 ~~~
 
-PRman searches read-only, selects one contribution-friendly target, checks its AGENTS.md,
-CONTRIBUTING, SECURITY, issue state, and CI rules, then lets Codex implement and verify the smallest
-useful change. It shows the exact proposed write before any GitHub mutation. A reply such as
-“确认” or “yes” is rejected: the user must repeat the displayed target-specific phrase exactly.
-For a non-ready assessment, that phrase also names the result being acknowledged.
+You do not need to understand GitHub search syntax, scoring systems, JSON packets, or PR workflow
+states. PRman keeps those details in the background.
 
-After confirmation, PRman may create the listed fork or branch, push the assessed commits, create a
-Draft PR, and follow CI. It can make up to two directly related CI repairs by default. A new
-repository, changed base, changed PR plan, or material scope expansion requires a new confirmation.
+## What you can ask
 
-## What version 0.4.0 implements
+~~~text
+Help me find a small issue in a well-known Python project and make a PR.
+~~~
 
-- An installable Plugin manifest and an implicitly discoverable prman Skill.
-- A declared GitHub MCP dependency; PRman reuses the connection managed by Codex.
-- Read-only repository and issue discovery with contribution-fit and anti-spam checks.
-- Repository-instruction, security-policy, existing-PR, base-commit, and CI inspection.
-- Codex-native local implementation and execution of the target repository's own checks.
-- A strict confirmation packet for the exact repository, branch route, diff, verification,
-  assessment, Draft PR text, external writes, and CI budget.
-- A deterministic confirmation helper that hashes the exact packet, rejects stale or inexact user
-  responses, and emits a scoped write authorization only after the displayed phrase is repeated.
-- Draft-only publication, no default-branch write, no force-push, and no merge or auto-merge.
-- A local workflow state machine that accepts only Draft PRs, binds CI to the current commit, counts
-  the confirmed repair rounds, checks the observed base, head route, diff, URL, and PR number,
-  rejects out-of-scope updates, and completes only after passing CI.
-- The existing assessment 1.1 core: strict JSON contracts, repository/base/task/diff bindings, typed
-  evidence, required and advisory gates, HMAC evidence attestation, optional authenticated scoring,
-  uncertainty-aware aggregation, and deterministic ready / revise / abstain results.
-- Test-only scorers that always force abstain, plus fail-closed scorer errors.
+~~~text
+I want to contribute to the React ecosystem. Find something useful that is small enough to finish.
+~~~
 
-The confirmation, authorization, and run-state contracts are available under [schemas](schemas),
-with an illustrative [examples/confirmation-packet.json](examples/confirmation-packet.json).
+~~~text
+Help me fix this GitHub issue and prepare the PR.
+~~~
+
+If the request is broad, PRman chooses one good target automatically. It prefers a recognised,
+active project with a contribution guide, an open and unclaimed issue, no competing PR, a manageable
+scope, and tests that can verify the change. It avoids abandoned projects, public security fixes,
+bulk PRs, and cosmetic changes with little value.
+
+## What you see before anything is sent
+
+PRman shows a short contribution preview:
+
+~~~text
+Repository: owner/project
+Task: Fix empty configuration handling (#42)
+Why this one: Active project, clear unclaimed issue, and a focused testable fix.
+Changed: 2 files — handle empty input and add a regression test.
+Tests: 12 passed.
+Risk: No known failing checks. Extra automatic quality score is unavailable.
+Draft PR: Fix empty configuration handling
+
+Review the full diff, then reply:
+CREATE DRAFT PR owner/project
+~~~
+
+That short phrase authorizes only the previewed Draft PR. Internally, PRman binds it to the exact
+repository, base commit, branch, diff, PR text, and CI repair limit. If any of those materially
+changes before publication, PRman asks again.
+
+## What version 0.5.0 implements
+
+- A Codex Skill and installable Plugin for one end-to-end open-source contribution.
+- Read-only discovery of one well-known, active, contribution-friendly project and suitable issue.
+- Inspection of project instructions, contribution and security policies, duplicate work, CI rules,
+  and the exact base commit.
+- Codex-native implementation and execution of the project's own tests and checks.
+- Internal diff, evidence, and quality binding without exposing technical packet details by default.
+- A simple user-facing preview with the selected task, changes, tests, risks, Draft PR title, and
+  reviewable diff.
+- The short repository-bound confirmation phrase `CREATE DRAFT PR owner/repo`.
+- Draft-only publication. PRman never merges, enables auto-merge, force-pushes, or writes directly
+  to the default branch.
+- CI monitoring and at most two same-task repair rounds by default.
+- Executable local contracts that reject stale confirmation, changed targets, unsafe writes,
+  out-of-scope repairs, and CI results from the wrong commit.
+
+PRman uses Codex's existing coding, shell, repository, and connected GitHub tools. It does not store
+a GitHub token or create a second coding agent.
 
 ## Current limits
 
-- Local Plugin installation, explicit and implicit fresh-task discovery, unrelated-question
-  non-triggering, installed helper resolution, and cache-busted reinstall have passed validation.
-  See the [2026-08-30 installation record](docs/plugin-installation-validation-2026-08-30.md).
-  A controlled real-repository Draft PR and CI run is still release work. Treat this as pre-alpha.
-- No production scorer or trusted evidence executor is shipped. The checked-in research profile
-  therefore cannot honestly return production ready.
-- When required gates pass but production scoring or attestation is missing, PRman reports abstain.
-  The user may still explicitly confirm a Draft PR while acknowledging that uncertainty; PRman must
-  never rename the result to ready.
-- PRman is not a background bot or hosted service. It runs inside the active Codex task and depends
-  on the GitHub tools and permissions available there.
-- The local state machine verifies order, content binding, and budgets; it cannot prove that a
-  confirmation response truly came from the user, that assessment, GitHub, or CI observations are
-  truthful, or that an `in_scope` repair claim is correct. Its locally writable JSON is a workflow
-  record, not a hostile-host security boundary. Codex and its connected tools remain responsible
-  for those observations and the actual writes.
-- It does not do bulk outreach, public vulnerability disclosure, reviewer assignment, comments,
-  approval, merge, auto-merge, or repository administration.
-- Thresholds remain research defaults and are not calibrated for production gating.
+- Version 0.5.0 is pre-alpha. The Skill, local safety contracts, and automated tests work, but this
+  simplified flow still needs a fresh installed-Plugin test and a complete contribution run against
+  a controlled real repository.
+- PRman runs inside the active Codex task; it is not a hosted service or background bot.
+- It handles one contribution at a time, not bulk outreach or mass PR creation.
+- It does not assign reviewers, post comments, approve, merge, change repository settings, or make a
+  private security report public.
+- No production quality scorer is bundled. Repository checks still run, and the preview plainly says
+  when the optional extra quality score is unavailable.
+- A maintainer may still request changes, reject the PR, or require a CLA or other human action.
 
-## Quality gate inside the workflow
+## How safety works in the background
 
-![PRman quality pipeline from an untrusted target repository through evidence collection, deterministic assessment, authenticated scoring, and human-confirmed external mutation](docs/assets/prman-pipeline-trust-boundaries.png)
+PRman keeps an internal packet containing the exact target, base commit, diff, test results, Draft PR
+text, planned GitHub writes, and CI repair budget. A local helper hashes and validates that packet.
+The user sees a plain-language preview, while the helper ensures the later GitHub write still matches
+what was previewed.
 
-The Python helper validates an exact UTF-8 diff and its evidence. Required gates run before scoring
-and cannot be overridden by a model. A production ready additionally requires an exact scorer
-binding, an absolute lower-confidence-bound floor, and a verified evidence attestation.
+The assessment core checks required gates such as scope, secrets, and tests before optional scoring.
+A test scorer can never claim production readiness, and a missing production scorer is reported as
+an uncertainty rather than silently treated as a pass. See [architecture](docs/architecture.md),
+[threat model](docs/threat-model.md), and [implementation status](docs/IMPLEMENTATION_STATUS.md) for
+the technical boundary.
 
-The preferred scorer boundary is an HMAC-authenticated loopback HTTP service. Fully trusted Python
-entry-point scorers are available only through explicit opt-in. Fixture and static providers exist
-for tests and demos and can never issue a readiness claim. See
-[docs/scorer-protocol.md](docs/scorer-protocol.md).
+## Skill and Plugin
 
-Ready means “eligible to ask the user,” not “correct,” “approved,” or “authorized to publish.”
-Every assessment result keeps external_write_authorized false; authority comes only from the later
-human confirmation packet. The separate write-authorization artifact is content-bound to that
-packet and still permits only the listed Draft PR operations.
+The Skill contains the contribution workflow. The Plugin makes the Skill installable and declares
+the connected GitHub tool it needs. The Python distribution and command are named `prman-codex` to
+avoid the unrelated existing PyPI project named `prman`.
 
-## Skill and Plugin shape
-
-The Skill contains the workflow and its progressively loaded references. The Plugin makes that Skill
-installable and declares the connected GitHub tool it needs. This follows the official OpenAI
-documentation for [building skills](https://learn.chatgpt.com/docs/build-skills),
+PRman follows the official OpenAI documentation for
+[building skills](https://learn.chatgpt.com/docs/build-skills),
 [building plugins](https://learn.chatgpt.com/docs/build-plugins), and
 [agent approvals](https://learn.chatgpt.com/docs/agent-approvals-security).
-
-The Python distribution and installed command are both named prman-codex, avoiding the unrelated
-existing PyPI prman project.
-
-The local personal-marketplace install and fresh-task invocation checks are recorded in
-[docs/plugin-installation-validation-2026-08-30.md](docs/plugin-installation-validation-2026-08-30.md).
-That record validates Plugin discovery and routing; it is not evidence of a completed live GitHub
-Draft PR.
 
 ## Development
 
@@ -138,7 +141,7 @@ make check PYTHON=python
 make demo PYTHON=python
 ~~~
 
-The demo intentionally uses a fixture scorer and returns abstain:
+The demo uses a test-only scorer and cannot claim production readiness:
 
 ~~~bash
 python skills/prman/scripts/assess.py \
@@ -147,38 +150,28 @@ python skills/prman/scripts/assess.py \
   --allow-test-scorer
 ~~~
 
-For a fail-closed run without any scorer:
-
-~~~bash
-python skills/prman/scripts/assess.py \
-  --input examples/assessment.json
-~~~
-
-To validate a confirmation packet before showing it to the user:
+To validate an internal confirmation packet:
 
 ~~~bash
 python skills/prman/scripts/workflow.py confirmation prepare \
   --input examples/confirmation-packet.json
 ~~~
 
-See [docs/architecture.md](docs/architecture.md),
-[docs/threat-model.md](docs/threat-model.md), and
-[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the exact implementation
-boundary. Visuals and mockups are cataloged in
+Visual assets and their intended use are listed in
 [docs/visual-assets.md](docs/visual-assets.md).
 
 ## Repository map
 
-- .codex-plugin/: installable Plugin metadata.
-- skills/prman/: full Codex workflow, safety rules, references, and bundled assessment helper.
-- src/prman/: deterministic assessment, authorization, workflow-state, and scorer code.
-- schemas/: assessment, confirmation, authorization, and run-state JSON contracts.
-- configs/: decision thresholds and scorer configuration examples.
-- examples/: fixture-only assessment, scorer, diff, and confirmation-packet examples.
-- docs/assets/: public diagrams, brand references, and clearly separated mockups.
-- tests/core/: unit, safety, distribution, CLI, schema, and Skill contract tests.
+- `.codex-plugin/`: installable Plugin metadata.
+- `skills/prman/`: contribution workflow, safety rules, and bundled helpers.
+- `src/prman/`: deterministic assessment, authorization, and workflow-state code.
+- `schemas/`: machine-readable assessment and workflow contracts.
+- `configs/`: quality-decision and scorer examples.
+- `examples/`: assessment and internal confirmation examples.
+- `docs/assets/`: public diagrams, brand assets, and separated mockups.
+- `tests/core/`: unit, safety, distribution, CLI, Schema, and Skill tests.
 
-## License and repository
+## License
 
 PRman is available under the [Apache License 2.0](LICENSE). The canonical repository is
 [primorLee/PRman](https://github.com/primorLee/PRman).

@@ -5,27 +5,35 @@ a user-selected target.
 
 ## Discovery is read-only
 
-Translate the user's goal into repository, language, activity, and task criteria. Search with
-Codex's existing GitHub tools and build a small shortlist; do not fork, branch, comment, assign an
-issue, or otherwise mutate GitHub during discovery.
+Translate the user's goal into repository, language, activity, and task criteria. When the user only
+says they want to contribute, choose sensible defaults instead of asking them to understand GitHub
+search filters. Search with Codex's existing GitHub tools and build a small internal shortlist; do
+not fork, branch, comment, assign an issue, or otherwise mutate GitHub during discovery.
 
-Choose one target, not a batch. Prefer work with all of the following:
+Choose one target, not a batch. By default, look for a well-known project: one that is recognisable
+in its ecosystem, actively maintained, used by a real developer community, and has a visible path
+for outside contributions. Stars and forks are useful signals, not a hard cutoff. Prefer work with
+all of the following:
 
 - a clear, open issue or maintainer-requested task that is not already assigned or covered by an
   active pull request;
-- recent project activity and a visible contribution path;
-- a scope that can be understood, implemented, and verified in the current task;
+- recent maintainer activity, a contribution guide, and evidence that outside PRs are reviewed;
+- a small scope that an ordinary developer can understand, implement, and verify in the current
+  task;
 - repository instructions and licensing that do not conflict with the proposed contribution;
-- tests or another concrete way to check the change.
+- tests or another concrete way to check the change;
+- an outcome that is useful to the project, not merely a cosmetic change made to create a PR.
 
 Avoid speculative drive-by changes, generated bulk PRs, abandoned repositories, dependency churn
 without a stated need, and cosmetic edits presented as substantive work. Never turn a suspected
 vulnerability into a public issue or PR; follow the repository's private security-reporting policy
 instead and stop the public contribution workflow.
 
-When several targets are plausible, compare at most three using issue clarity, contribution fit,
-maintainer activity, verification feasibility, and expected scope. Record why the selected target is
-the best fit so the confirmation packet can explain the choice.
+When several targets are plausible, compare at most three internally using project recognition,
+issue clarity, contribution fit, maintainer activity, verification feasibility, and expected scope.
+Select the best one automatically when there is a clear winner. Ask the user to choose only when the
+options differ materially in language, effort, or risk. Record a one-sentence plain-language reason
+for the contribution preview.
 
 ## Inspect before editing
 

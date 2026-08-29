@@ -1,7 +1,7 @@
 {
   "name": "prman",
-  "version": "0.4.0",
-  "description": "Human-confirmed, end-to-end Draft PR automation for Codex",
+  "version": "0.5.0",
+  "description": "Help developers contribute to well-known open-source projects with Codex",
   "author": {
     "name": "PRman contributors"
   },
@@ -17,8 +17,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "PRman",
-    "shortDescription": "Find, fix, and draft PRs.",
-    "longDescription": "PRman guides Codex from read-only repository discovery through implementation, deterministic quality checks, a content-bound human confirmation, Draft PR creation, and validated CI repair transitions. Codex supplies the coding and connected GitHub tools; PRman supplies the workflow and fail-closed local safety state.",
+    "shortDescription": "Contribute to popular repos.",
+    "longDescription": "PRman helps an ordinary developer make one useful contribution to a well-known open-source project. It finds a suitable issue, lets Codex implement and test the change, shows a simple preview, asks for one short confirmation, creates a Draft PR, and follows CI. Detailed quality and safety checks stay in the background.",
     "developerName": "PRman contributors",
     "category": "Productivity",
     "capabilities": [
@@ -26,8 +26,8 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use PRman to find a suitable Python issue, implement and verify it, then ask before opening a Draft PR.",
-      "Use PRman to fix this GitHub issue, assess the final diff, and prepare an exact Draft PR confirmation."
+      "Help me find a small issue in a well-known Python project, fix it, test it, and ask me before creating a Draft PR.",
+      "Help me contribute this fix to the project, show me a simple preview, then ask before creating a Draft PR."
     ]
   }
 }
