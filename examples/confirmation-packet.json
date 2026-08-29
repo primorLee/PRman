@@ -1,5 +1,5 @@
 {
-  "schema_version": "prman-confirmation-packet/1.0",
+  "schema_version": "prman-confirmation-packet/1.1",
   "repository": {
     "full_name": "octo-org/widget",
     "url": "https://github.com/octo-org/widget",
@@ -20,7 +20,7 @@
     "fork_required": true
   },
   "diff": {
-    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "sha256": "cea1e19de362686f7fbfb351a58f5bd31a81b4bbe327e95961f7b6beb42537e9",
     "files": [
       "src/widget/config.py",
       "tests/test_config.py"
@@ -67,6 +67,7 @@
   },
   "approval": {
     "status": "pending",
-    "prompt": "Confirm creating this Draft PR despite the disclosed abstain result and allow up to two in-scope CI repair updates?"
+    "prompt": "Assessment result: Required gates passed, but no production scorer or trusted evidence attestation is configured. Reply exactly ‘CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config ACKNOWLEDGE ABSTAIN’ to acknowledge that result, create this Draft PR, and allow up to two in-scope CI repair updates.",
+    "confirmation_phrase": "CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config ACKNOWLEDGE ABSTAIN"
   }
 }

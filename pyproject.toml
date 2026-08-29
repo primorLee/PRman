@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prman-codex"
-version = "0.3.0"
+version = "0.4.0"
 description = "Pre-alpha end-to-end Draft PR automation for Codex"
 readme = "README.md"
 license = "Apache-2.0"
@@ -66,6 +66,7 @@ files = [
   "src/prman/decision.py",
   "src/prman/models.py",
   "src/prman/validation.py",
+  "src/prman/workflow.py",
   "src/prman/scorers",
 ]
 

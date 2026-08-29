@@ -16,7 +16,7 @@ not be presented as runtime evidence or as proof that an integration has been va
 
 | Asset | Intended future use | Why it is not a current product screenshot |
 | --- | --- | --- |
-| [`prman-local-run-mockup.png`](assets/mockups/prman-local-run-mockup.png) | Example CLI walkthrough after regeneration | The displayed `1.0` result shape, log lines, gate names, timestamp, output path, and singular `evaluation` object do not match the current `prman-assessment-result/1.1` CLI output. Regenerate it from a captured `0.3.0` run before publishing it as evidence. |
+| [`prman-local-run-mockup.png`](assets/mockups/prman-local-run-mockup.png) | Example CLI walkthrough after regeneration | The displayed `1.0` result shape, log lines, gate names, timestamp, output path, and singular `evaluation` object do not match the current `prman-assessment-result/1.1` CLI output. Regenerate it from a captured `0.4.0` run before publishing it as evidence. |
 | [`prman-plugin-invocation-mockup.png`](assets/mockups/prman-plugin-invocation-mockup.png) | Installation and `$prman` invocation guide after PRM-008 | The image explicitly depicts a proposed UI, a mock result, and version `0.1.0`. Replace it with a real fresh-task installation and invocation capture after that workflow passes validation. |
 
 ## Publication rule

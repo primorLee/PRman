@@ -111,8 +111,10 @@ test_only true.
 ### Stale or ambiguous write confirmation
 
 The assessment result always sets external_write_authorized false. Before any GitHub mutation, the
-Skill presents the exact packet and stops. A short affirmative response is accepted only as a reply
-to that latest unchanged packet.
+Skill presents the exact packet and stops. A short affirmative response such as yes or confirm is
+never sufficient. The response must exactly match a phrase naming the repository and head branch;
+for revise or abstain it also names the decision being acknowledged, while the prompt shows the
+exact non-ready reason. Leading or trailing whitespace is not normalized.
 
 Changing the repository, base commit, branch route, initial diff, PR title or body, operation list,
 or CI budget before publication invalidates confirmation. After publication, only a repair within
@@ -144,6 +146,11 @@ config, packet, or assessment. PRman never asks for or stores a GitHub token.
   integrity.
 - Skill instructions and schemas can constrain intended behavior but do not replace Codex platform
   enforcement or a live end-to-end security test.
+- The local authorization and workflow artifacts are not signed user-identity attestations. The
+  helper cannot prove that the user supplied the response, that the unchanged packet was displayed,
+  that reported assessment, GitHub, or CI facts are truthful, or that an `in_scope` claim is
+  semantically true. A process with write access to the JSON state can replace it; these artifacts
+  are workflow records rather than a hostile-host enforcement boundary.
 - GitHub connector security, account permissions, fork policy, CLA enforcement, target-repository
   supply-chain risk, and CI infrastructure remain owned by their respective systems.
 - Fresh-task Plugin installation, representative public-repository execution, denial-path testing,

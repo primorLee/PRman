@@ -39,14 +39,18 @@ client, worktree manager, or command sandbox.
 7. Read [references/github-workflow.md](references/github-workflow.md) and
    [references/safety.md](references/safety.md). Show one exact confirmation packet containing the
    target, branches, base commit, diff, verification, assessment, Draft PR text, planned writes, and
-   CI repair budget. Then stop and wait for an unambiguous user confirmation of that unchanged
-   packet.
-8. After confirmation, use Codex's GitHub tools to perform only the listed writes: create or use the
-   confirmed contribution branch, publish the exact assessed change, and open a Draft PR. Never
-   merge, enable auto-merge, force-push, or write the default branch.
+   CI repair budget. Validate it with the bundled workflow helper, show its digest and exact
+   target-specific confirmation phrase, then stop and wait. For `revise` or `abstain`, show the
+   exact reason and require the helper's acknowledgement phrase. Create a scoped write authorization
+   only from the user's byte-for-byte response to that unchanged packet; a plain yes is invalid.
+8. After authorization, use Codex's GitHub tools to perform only the listed writes: create or use
+   the confirmed contribution branch, publish the exact assessed change, and open a Draft PR. Record
+   the returned Draft PR in the helper state. Never merge, enable auto-merge, force-push, or write
+   the default branch.
 9. Follow the Draft PR's CI. Within the confirmed budget, diagnose failures, make only in-scope
    repairs, rerun verification and assessment, and update the same Draft PR without force-pushing.
-   A material scope change requires a refreshed packet and new confirmation.
+   Advance the helper state for each CI result and repair round. A material scope change requires a
+   refreshed packet and new confirmation.
 10. Return the Draft PR URL, CI state, assessment decision, changes made after confirmation, and any
     remaining human action.
 

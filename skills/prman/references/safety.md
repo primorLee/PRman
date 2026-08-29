@@ -6,6 +6,9 @@ Read this reference immediately before any proposed GitHub mutation.
 - Present the exact confirmation packet defined in `github-workflow.md`, then wait. Confirmation
   applies only to that repository, base, branch route, initial diff, PR text, write list, and the
   explicitly bounded CI repair envelope.
+- Run the bundled confirmation helper before asking and after the exact response. No authorization
+  artifact means no GitHub write. A plain yes/confirm is invalid; repeat only the target-specific
+  phrase displayed by the helper. Never invent, normalize, trim, or reuse the user's response.
 - Only create or update the confirmed Draft PR. Never merge, approve, enable auto-merge, mark ready
   for review, force-push, write the default branch, change repository administration, or expose
   secrets.

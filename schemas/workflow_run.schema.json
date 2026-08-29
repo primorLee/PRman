@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/workflow_run.schema.json",
+  "title": "PRman workflow run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "authorization",
+    "state",
+    "current_diff_sha256",
+    "repair_rounds_used",
+    "pull_request",
+    "last_ci"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "prman-workflow-run/1.0"
+    },
+    "authorization": {
+      "$ref": "write_authorization.schema.json"
+    },
+    "state": {
+      "enum": ["authorized", "draft_open", "ci_failed", "repairing", "complete"]
+    },
+    "current_diff_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "repair_rounds_used": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "pull_request": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/pull_request"}
+      ]
+    },
+    "last_ci": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/ci_result"}
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"state": {"const": "authorized"}}
+      },
+      "then": {
+        "properties": {
+          "repair_rounds_used": {"const": 0},
+          "pull_request": {"type": "null"},
+          "last_ci": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"state": {"const": "draft_open"}}
+      },
+      "then": {
+        "properties": {
+          "pull_request": {"$ref": "#/$defs/pull_request"},
+          "last_ci": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {"enum": ["ci_failed", "repairing"]}
+        }
+      },
+      "then": {
+        "properties": {
+          "pull_request": {"$ref": "#/$defs/pull_request"},
+          "last_ci": {
+            "$ref": "#/$defs/failed_ci_result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"state": {"const": "repairing"}}
+      },
+      "then": {
+        "properties": {
+          "repair_rounds_used": {"minimum": 1}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"state": {"const": "complete"}}
+      },
+      "then": {
+        "properties": {
+          "pull_request": {"$ref": "#/$defs/pull_request"},
+          "last_ci": {
+            "$ref": "#/$defs/passed_ci_result"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "pull_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "number", "draft", "head_commit"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[1-9][0-9]*$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "draft": {
+          "const": true
+        },
+        "head_commit": {
+          "$ref": "#/$defs/revision"
+        }
+      }
+    },
+    "ci_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "summary", "head_commit"],
+      "properties": {
+        "status": {
+          "enum": ["passed", "failed"]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_commit": {
+          "$ref": "#/$defs/revision"
+        }
+      }
+    },
+    "failed_ci_result": {
+      "allOf": [
+        {"$ref": "#/$defs/ci_result"},
+        {
+          "properties": {
+            "status": {"const": "failed"}
+          }
+        }
+      ]
+    },
+    "passed_ci_result": {
+      "allOf": [
+        {"$ref": "#/$defs/ci_result"},
+        {
+          "properties": {
+            "status": {"const": "passed"}
+          }
+        }
+      ]
+    }
+  }
+}

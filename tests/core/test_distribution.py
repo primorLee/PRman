@@ -15,6 +15,7 @@ from prman.assessment import Assessment, AssessmentEngine
 from prman.decision import DecisionConfig
 from prman.models import GateResult, ScoreBundle
 from prman.validation import ContractError
+from prman.workflow import ConfirmationPacket, WorkflowRun, authorize_confirmation
 
 
 def _schemas() -> dict[str, dict[str, object]]:
@@ -36,7 +37,7 @@ class DistributionTests(unittest.TestCase):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "prman")
         self.assertEqual(manifest["skills"], "./skills/")
-        self.assertEqual(manifest["version"], "0.3.0")
+        self.assertEqual(manifest["version"], "0.4.0")
         self.assertIn("Write", manifest["interface"]["capabilities"])
         self.assertLessEqual(len(manifest["interface"]["shortDescription"]), 30)
         prompts = manifest["interface"]["defaultPrompt"]
@@ -109,6 +110,14 @@ class DistributionTests(unittest.TestCase):
             "attestation_verified": True,
             "override_acknowledgement_required": False,
         }
+        ready_packet["approval"] = {
+            "status": "pending",
+            "prompt": (
+                "Reply exactly ‘CONFIRM DRAFT PR octo-org/widget "
+                "codex/handle-empty-config’ to create this Draft PR."
+            ),
+            "confirmation_phrase": ("CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config"),
+        }
         validator.validate(ready_packet)
 
         invalid_packets = []
@@ -141,6 +150,24 @@ class DistributionTests(unittest.TestCase):
         del missing_exact_diff["diff"]["patch"]
         invalid_packets.append(missing_exact_diff)
 
+        missing_initial_write = copy.deepcopy(packet)
+        missing_initial_write["external_writes"].remove("push_commits")
+        invalid_packets.append(missing_initial_write)
+
+        mismatched_ci_budget = copy.deepcopy(packet)
+        mismatched_ci_budget["ci_followup"]["max_fix_rounds"] = 0
+        invalid_packets.append(mismatched_ci_budget)
+
+        inexact_confirmation = copy.deepcopy(packet)
+        inexact_confirmation["approval"]["confirmation_phrase"] = "yes"
+        invalid_packets.append(inexact_confirmation)
+
+        missing_abstain_acknowledgement = copy.deepcopy(packet)
+        missing_abstain_acknowledgement["approval"]["confirmation_phrase"] = (
+            "CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config"
+        )
+        invalid_packets.append(missing_abstain_acknowledgement)
+
         for invalid_packet in invalid_packets:
             with self.subTest(invalid_packet=invalid_packet), self.assertRaises(ValidationError):
                 validator.validate(invalid_packet)
@@ -160,6 +187,15 @@ class DistributionTests(unittest.TestCase):
         assessment_value = json.loads(
             (ROOT / "examples" / "assessment.json").read_text(encoding="utf-8")
         )
+        confirmation_value = json.loads(
+            (ROOT / "examples" / "confirmation-packet.json").read_text(encoding="utf-8")
+        )
+        packet = ConfirmationPacket.from_dict(confirmation_value)
+        authorization = authorize_confirmation(
+            packet,
+            expected_packet_digest=packet.packet_digest,
+            response=packet.confirmation_phrase,
+        )
         values = {
             "assessment.schema.json": assessment_value,
             "decision_config.schema.json": decision_config().as_dict(),
@@ -168,6 +204,10 @@ class DistributionTests(unittest.TestCase):
             "assessment_result.schema.json": AssessmentEngine(decision_config())
             .run(Assessment.from_dict(assessment_value))
             .as_dict(),
+            "confirmation_packet.schema.json": confirmation_value,
+            "confirmation_check.schema.json": packet.preparation(),
+            "write_authorization.schema.json": authorization.as_dict(),
+            "workflow_run.schema.json": WorkflowRun.start(authorization).as_dict(),
         }
         for name, value in values.items():
             with self.subTest(instance=name):

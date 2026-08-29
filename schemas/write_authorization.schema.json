@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/write_authorization.schema.json",
+  "title": "PRman write authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "packet_digest",
+    "confirmation_phrase_digest",
+    "repository",
+    "base",
+    "head",
+    "initial_diff_sha256",
+    "assessment_decision",
+    "external_writes",
+    "ci_followup",
+    "policy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "prman-write-authorization/1.0"
+    },
+    "packet_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "confirmation_phrase_digest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "repository": {
+      "$ref": "#/$defs/full_name"
+    },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "commit"],
+      "properties": {
+        "branch": {
+          "$ref": "#/$defs/branch"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    },
+    "head": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "branch"],
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/full_name"
+        },
+        "branch": {
+          "$ref": "#/$defs/branch"
+        }
+      }
+    },
+    "initial_diff_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "assessment_decision": {
+      "enum": ["ready", "revise", "abstain"]
+    },
+    "external_writes": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "create_fork",
+          "create_branch",
+          "push_commits",
+          "create_draft_pr",
+          "update_draft_pr"
+        ]
+      },
+      "allOf": [
+        {"contains": {"const": "create_branch"}},
+        {"contains": {"const": "push_commits"}},
+        {"contains": {"const": "create_draft_pr"}}
+      ]
+    },
+    "ci_followup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_fix_rounds", "publish_repairs", "scope"],
+      "properties": {
+        "max_fix_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "publish_repairs": {
+          "type": "boolean"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "policy": {
+      "const": {
+        "draft_only": true,
+        "external_write_authorized": true,
+        "merge_authorized": false,
+        "force_push_authorized": false,
+        "default_branch_write_authorized": false
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ci_followup": {
+            "properties": {"publish_repairs": {"const": true}}
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "ci_followup": {
+            "properties": {"max_fix_rounds": {"minimum": 1}}
+          },
+          "external_writes": {
+            "contains": {"const": "update_draft_pr"}
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "ci_followup": {
+            "properties": {"max_fix_rounds": {"const": 0}}
+          },
+          "external_writes": {
+            "not": {"contains": {"const": "update_draft_pr"}}
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "full_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

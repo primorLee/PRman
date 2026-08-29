@@ -52,7 +52,7 @@ uncertainty and truncation, exact scorer metadata binding, and a verified canoni
 After the final diff is verified and assessed, the Skill prepares a packet containing:
 
 - exact repository, selected task, base commit, base and head branches, and fork route;
-- exact patch or accessible patch artifact, digest, changed files, and summary;
+- exact embedded patch, digest, changed files, and summary;
 - every relevant command result;
 - ready, revise, or abstain plus scorer and attestation state;
 - Draft PR title and body;
@@ -60,7 +60,15 @@ After the final diff is verified and assessed, the Skill prepares a packet conta
 
 schemas/confirmation_packet.schema.json defines the machine-readable contract. Initial publication
 is valid only for the unchanged packet; later diff updates are limited to its explicit CI repair
-envelope. The assessment result itself always denies external-write authority.
+envelope. The assessment result itself always denies external-write authority. The local workflow
+helper validates the packet, returns its canonical digest and target-specific confirmation phrase,
+and creates a scoped authorization only when the response matches that phrase byte-for-byte. A
+non-ready phrase explicitly acknowledges revise or abstain, and its prompt must include the exact
+assessment reason.
+
+The authorization artifact and run state have separate schemas. Their parsers recheck the target,
+base, branch and fork route, allowed writes, Draft-only policy, confirmation-phrase digest, and CI
+budget instead of trusting serialized state.
 
 ### GitHub publication and CI follow-up
 
@@ -72,6 +80,13 @@ CI inspection is read-only. The default confirmation may authorize at most two s
 rounds on the same Draft PR. Every repair is retested and reassessed against a new diff digest.
 Dependency changes, public API changes, broad refactors, security-posture changes, repository or
 issue changes, and review responses require a new packet and confirmation.
+
+The executable local run states are `authorized`, `draft_open`, `ci_failed`, `repairing`, and
+`complete`. A Draft record must use the canonical GitHub PR URL and number for the authorized
+repository and repeat the observed base branch and commit, head repository and branch, and diff
+digest. CI must refer to the current PR head commit. Starting a repair consumes one confirmed round;
+recording an update requires a new diff, a new commit, and an explicit in-scope assertion. Only
+passing CI reaches complete.
 
 ## State flow
 
@@ -99,6 +114,12 @@ required gate is not equivalent and requires a separate, failure-specific overri
 ## Package boundary
 
 The Plugin contains the full Skill workflow and declares its GitHub MCP dependency. The Python
-distribution contains only prman and prman.scorers: the deterministic assessment library, CLI, and
-scorer adapters. Search, editing, command execution, credentials, and GitHub mutation remain Codex
-capabilities directed by the Skill rather than Python package modules.
+distribution contains only prman and prman.scorers: the deterministic assessment, confirmation,
+authorization, run-state, CLI, and scorer code. Search, editing, command execution, credentials, and
+GitHub mutation remain Codex capabilities directed by the Skill rather than Python package modules.
+
+The helper is an acceptance and sequencing layer, not a cryptographic user-identity or remote-state
+attestation system. It cannot prove who typed the confirmation, whether Codex displayed the packet,
+whether reported assessment, GitHub, and CI facts are true, or whether a claimed repair is
+semantically in scope. Its locally stored JSON can be replaced by a process with filesystem write
+access, so it is not a hostile-host enforcement boundary.

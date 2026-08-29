@@ -15,6 +15,12 @@ from prman.scorers.config import load_scorer_config
 from prman.scorers.protocols import ScorerUnavailableError
 from prman.scorers.registry import ScorerRegistry
 from prman.validation import ContractError, load_json
+from prman.workflow import (
+    ConfirmationPacket,
+    WorkflowRun,
+    WriteAuthorization,
+    authorize_confirmation,
+)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -65,6 +71,81 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     assess.add_argument("--output", type=Path, help="Write JSON here instead of stdout.")
     assess.set_defaults(handler=_assess)
+
+    confirmation = subparsers.add_parser(
+        "confirmation",
+        help="Validate an exact confirmation packet and record explicit user authorization.",
+    )
+    confirmation_commands = confirmation.add_subparsers(dest="confirmation_command", required=True)
+    confirmation_prepare = confirmation_commands.add_parser(
+        "prepare", help="Validate a packet and emit its immutable digest and confirmation phrase."
+    )
+    confirmation_prepare.add_argument("--input", type=Path, required=True)
+    confirmation_prepare.add_argument("--output", type=Path)
+    confirmation_prepare.set_defaults(handler=_confirmation_prepare)
+
+    confirmation_authorize = confirmation_commands.add_parser(
+        "authorize", help="Create a scoped write authorization after an exact user response."
+    )
+    confirmation_authorize.add_argument("--input", type=Path, required=True)
+    confirmation_authorize.add_argument("--expected-packet-digest", required=True)
+    confirmation_authorize.add_argument("--response", required=True)
+    confirmation_authorize.add_argument("--output", type=Path)
+    confirmation_authorize.set_defaults(handler=_confirmation_authorize)
+
+    workflow = subparsers.add_parser(
+        "workflow", help="Track Draft PR and CI transitions under a write authorization."
+    )
+    workflow_commands = workflow.add_subparsers(dest="workflow_command", required=True)
+    workflow_begin = workflow_commands.add_parser(
+        "begin", help="Start a workflow run from a validated write authorization."
+    )
+    workflow_begin.add_argument("--authorization", type=Path, required=True)
+    workflow_begin.add_argument("--output", type=Path)
+    workflow_begin.set_defaults(handler=_workflow_begin)
+
+    workflow_draft = workflow_commands.add_parser(
+        "record-draft", help="Record the exact Draft PR created under the authorization."
+    )
+    workflow_draft.add_argument("--input", type=Path, required=True)
+    workflow_draft.add_argument("--url", required=True)
+    workflow_draft.add_argument("--number", type=int, required=True)
+    workflow_draft.add_argument("--base-branch", required=True)
+    workflow_draft.add_argument("--base-commit", required=True)
+    workflow_draft.add_argument("--head-repository", required=True)
+    workflow_draft.add_argument("--head-branch", required=True)
+    workflow_draft.add_argument("--diff-sha256", required=True)
+    workflow_draft.add_argument("--head-commit", required=True)
+    workflow_draft.add_argument("--draft", action="store_true", required=True)
+    workflow_draft.add_argument("--output", type=Path)
+    workflow_draft.set_defaults(handler=_workflow_record_draft)
+
+    workflow_ci = workflow_commands.add_parser(
+        "record-ci", help="Record a passing or failing CI result for the current Draft PR head."
+    )
+    workflow_ci.add_argument("--input", type=Path, required=True)
+    workflow_ci.add_argument("--status", choices=("passed", "failed"), required=True)
+    workflow_ci.add_argument("--summary", required=True)
+    workflow_ci.add_argument("--head-commit", required=True)
+    workflow_ci.add_argument("--output", type=Path)
+    workflow_ci.set_defaults(handler=_workflow_record_ci)
+
+    workflow_repair = workflow_commands.add_parser(
+        "begin-repair", help="Consume one confirmed CI repair round after a failure."
+    )
+    workflow_repair.add_argument("--input", type=Path, required=True)
+    workflow_repair.add_argument("--output", type=Path)
+    workflow_repair.set_defaults(handler=_workflow_begin_repair)
+
+    workflow_update = workflow_commands.add_parser(
+        "record-update", help="Record a newly assessed, in-scope repair commit."
+    )
+    workflow_update.add_argument("--input", type=Path, required=True)
+    workflow_update.add_argument("--diff-sha256", required=True)
+    workflow_update.add_argument("--head-commit", required=True)
+    workflow_update.add_argument("--in-scope", action="store_true", required=True)
+    workflow_update.add_argument("--output", type=Path)
+    workflow_update.set_defaults(handler=_workflow_record_update)
     return parser
 
 
@@ -91,6 +172,18 @@ def _scorers_list(args: argparse.Namespace) -> int:
 
 def _render(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, allow_nan=False, indent=2, sort_keys=True) + "\n"
+
+
+def _emit(value: Any, output: Path | None, *, label: str) -> int:
+    rendered = _render(value)
+    if output is None:
+        sys.stdout.write(rendered)
+    else:
+        try:
+            output.write_text(rendered, encoding="utf-8")
+        except OSError as exc:
+            raise ContractError(f"cannot write {label} {output}: {exc}") from exc
+    return 0
 
 
 def _assess(args: argparse.Namespace) -> int:
@@ -132,15 +225,68 @@ def _assess(args: argparse.Namespace) -> int:
         scorer,
         scorer_failure=scorer_failure,
     ).run(assessment)
-    rendered = _render(result.as_dict())
-    if args.output is None:
-        sys.stdout.write(rendered)
-    else:
-        try:
-            args.output.write_text(rendered, encoding="utf-8")
-        except OSError as exc:
-            raise ContractError(f"cannot write assessment result {args.output}: {exc}") from exc
-    return 0
+    return _emit(result.as_dict(), args.output, label="assessment result")
+
+
+def _confirmation_prepare(args: argparse.Namespace) -> int:
+    packet = ConfirmationPacket.from_dict(load_json(args.input))
+    return _emit(packet.preparation(), args.output, label="confirmation check")
+
+
+def _confirmation_authorize(args: argparse.Namespace) -> int:
+    packet = ConfirmationPacket.from_dict(load_json(args.input))
+    authorization = authorize_confirmation(
+        packet,
+        expected_packet_digest=args.expected_packet_digest,
+        response=args.response,
+    )
+    return _emit(authorization.as_dict(), args.output, label="write authorization")
+
+
+def _workflow_begin(args: argparse.Namespace) -> int:
+    authorization = WriteAuthorization.from_dict(load_json(args.authorization))
+    return _emit(WorkflowRun.start(authorization).as_dict(), args.output, label="workflow run")
+
+
+def _workflow_record_draft(args: argparse.Namespace) -> int:
+    workflow = WorkflowRun.from_dict(load_json(args.input))
+    updated = workflow.record_draft(
+        url=args.url,
+        number=args.number,
+        base_branch=args.base_branch,
+        base_commit=args.base_commit,
+        head_repository=args.head_repository,
+        head_branch=args.head_branch,
+        diff_sha256=args.diff_sha256,
+        head_commit=args.head_commit,
+        draft=args.draft,
+    )
+    return _emit(updated.as_dict(), args.output, label="workflow run")
+
+
+def _workflow_record_ci(args: argparse.Namespace) -> int:
+    workflow = WorkflowRun.from_dict(load_json(args.input))
+    updated = workflow.record_ci(
+        status=args.status,
+        summary=args.summary,
+        head_commit=args.head_commit,
+    )
+    return _emit(updated.as_dict(), args.output, label="workflow run")
+
+
+def _workflow_begin_repair(args: argparse.Namespace) -> int:
+    workflow = WorkflowRun.from_dict(load_json(args.input))
+    return _emit(workflow.begin_repair().as_dict(), args.output, label="workflow run")
+
+
+def _workflow_record_update(args: argparse.Namespace) -> int:
+    workflow = WorkflowRun.from_dict(load_json(args.input))
+    updated = workflow.record_update(
+        diff_sha256=args.diff_sha256,
+        head_commit=args.head_commit,
+        in_scope=args.in_scope,
+    )
+    return _emit(updated.as_dict(), args.output, label="workflow run")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

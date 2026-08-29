@@ -2,7 +2,7 @@ PYTHON ?= python3.11
 PYTHONPATH := src
 CORE_PATHS := src/prman/__init__.py src/prman/__main__.py src/prman/assessment.py \
 	src/prman/cli.py src/prman/decision.py src/prman/models.py src/prman/validation.py \
-	src/prman/scorers tests/core skills/prman/scripts
+	src/prman/workflow.py src/prman/scorers tests/core skills/prman/scripts
 
 .PHONY: check test coverage lint format-check type-check compile dist-check demo
 

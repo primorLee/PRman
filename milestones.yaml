@@ -2,7 +2,7 @@ schema_version: prman-milestones/2.0
 milestones:
   - id: M0
     title: Codex-native MVP
-    exit: Full discovery-to-CI Skill, GitHub dependency, confirmation contract, deterministic core, and validators are complete
+    exit: Full discovery-to-CI Skill, GitHub dependency, executable confirmation and run-state contracts, deterministic core, and validators are complete
   - id: M1
     title: Production scorer boundary
     exit: One external calibrated scorer passes the conformance suite without entering the core package

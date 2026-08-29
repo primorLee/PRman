@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/confirmation_check.schema.json",
+  "title": "PRman confirmation check",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "packet_digest",
+    "repository",
+    "confirmation_phrase",
+    "policy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "prman-confirmation-check/1.0"
+    },
+    "packet_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "confirmation_phrase": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^CONFIRM DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ \\S+(?: ACKNOWLEDGE (?:REVISE|ABSTAIN))?$"
+    },
+    "policy": {
+      "const": {
+        "human_confirmation_required": true,
+        "draft_only": true,
+        "external_write_authorized": false
+      }
+    }
+  }
+}

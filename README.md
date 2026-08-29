@@ -40,13 +40,14 @@ implement and test the fix, then ask me before opening a Draft PR.
 PRman searches read-only, selects one contribution-friendly target, checks its AGENTS.md,
 CONTRIBUTING, SECURITY, issue state, and CI rules, then lets Codex implement and verify the smallest
 useful change. It shows the exact proposed write before any GitHub mutation. A reply such as
-“确认” applies only to that unchanged packet.
+“确认” or “yes” is rejected: the user must repeat the displayed target-specific phrase exactly.
+For a non-ready assessment, that phrase also names the result being acknowledged.
 
 After confirmation, PRman may create the listed fork or branch, push the assessed commits, create a
 Draft PR, and follow CI. It can make up to two directly related CI repairs by default. A new
 repository, changed base, changed PR plan, or material scope expansion requires a new confirmation.
 
-## What version 0.3.0 implements
+## What version 0.4.0 implements
 
 - An installable Plugin manifest and an implicitly discoverable prman Skill.
 - A declared GitHub MCP dependency; PRman reuses the connection managed by Codex.
@@ -55,16 +56,19 @@ repository, changed base, changed PR plan, or material scope expansion requires 
 - Codex-native local implementation and execution of the target repository's own checks.
 - A strict confirmation packet for the exact repository, branch route, diff, verification,
   assessment, Draft PR text, external writes, and CI budget.
+- A deterministic confirmation helper that hashes the exact packet, rejects stale or inexact user
+  responses, and emits a scoped write authorization only after the displayed phrase is repeated.
 - Draft-only publication, no default-branch write, no force-push, and no merge or auto-merge.
-- CI monitoring and bounded, same-scope repair commits with reassessment after every edit.
+- A local workflow state machine that accepts only Draft PRs, binds CI to the current commit, counts
+  the confirmed repair rounds, checks the observed base, head route, diff, URL, and PR number,
+  rejects out-of-scope updates, and completes only after passing CI.
 - The existing assessment 1.1 core: strict JSON contracts, repository/base/task/diff bindings, typed
   evidence, required and advisory gates, HMAC evidence attestation, optional authenticated scoring,
   uncertainty-aware aggregation, and deterministic ready / revise / abstain results.
 - Test-only scorers that always force abstain, plus fail-closed scorer errors.
 
-The confirmation contract is available as
-[schemas/confirmation_packet.schema.json](schemas/confirmation_packet.schema.json), with an
-illustrative [examples/confirmation-packet.json](examples/confirmation-packet.json).
+The confirmation, authorization, and run-state contracts are available under [schemas](schemas),
+with an illustrative [examples/confirmation-packet.json](examples/confirmation-packet.json).
 
 ## Current limits
 
@@ -77,6 +81,11 @@ illustrative [examples/confirmation-packet.json](examples/confirmation-packet.js
   never rename the result to ready.
 - PRman is not a background bot or hosted service. It runs inside the active Codex task and depends
   on the GitHub tools and permissions available there.
+- The local state machine verifies order, content binding, and budgets; it cannot prove that a
+  confirmation response truly came from the user, that assessment, GitHub, or CI observations are
+  truthful, or that an `in_scope` repair claim is correct. Its locally writable JSON is a workflow
+  record, not a hostile-host security boundary. Codex and its connected tools remain responsible
+  for those observations and the actual writes.
 - It does not do bulk outreach, public vulnerability disclosure, reviewer assignment, comments,
   approval, merge, auto-merge, or repository administration.
 - Thresholds remain research defaults and are not calibrated for production gating.
@@ -96,7 +105,8 @@ for tests and demos and can never issue a readiness claim. See
 
 Ready means “eligible to ask the user,” not “correct,” “approved,” or “authorized to publish.”
 Every assessment result keeps external_write_authorized false; authority comes only from the later
-human confirmation packet.
+human confirmation packet. The separate write-authorization artifact is content-bound to that
+packet and still permits only the listed Draft PR operations.
 
 ## Skill and Plugin shape
 
@@ -137,6 +147,13 @@ python skills/prman/scripts/assess.py \
   --input examples/assessment.json
 ~~~
 
+To validate a confirmation packet before showing it to the user:
+
+~~~bash
+python skills/prman/scripts/workflow.py confirmation prepare \
+  --input examples/confirmation-packet.json
+~~~
+
 See [docs/architecture.md](docs/architecture.md),
 [docs/threat-model.md](docs/threat-model.md), and
 [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the exact implementation
@@ -147,8 +164,8 @@ boundary. Visuals and mockups are cataloged in
 
 - .codex-plugin/: installable Plugin metadata.
 - skills/prman/: full Codex workflow, safety rules, references, and bundled assessment helper.
-- src/prman/: deterministic assessment library and scorer adapters.
-- schemas/: assessment and confirmation JSON contracts.
+- src/prman/: deterministic assessment, authorization, workflow-state, and scorer code.
+- schemas/: assessment, confirmation, authorization, and run-state JSON contracts.
 - configs/: decision thresholds and scorer configuration examples.
 - examples/: fixture-only assessment, scorer, diff, and confirmation-packet examples.
 - docs/assets/: public diagrams, brand references, and clearly separated mockups.

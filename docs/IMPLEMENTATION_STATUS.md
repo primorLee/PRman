@@ -1,9 +1,9 @@
 # Implementation status
 
-PRman 0.3.0 is a pre-alpha, end-to-end Draft PR orchestration Skill for Codex. The repository is
+PRman 0.4.0 is a pre-alpha, end-to-end Draft PR orchestration Skill for Codex. The repository is
 public at primorLee/PRman and licensed under Apache-2.0. The workflow is implemented in the Skill and
-its contracts; clean-install and live GitHub end-to-end validation are still required before a
-release claim.
+in executable local contracts; clean-install and live GitHub end-to-end validation are still
+required before a release claim.
 
 ## Implemented workflow
 
@@ -17,19 +17,30 @@ release claim.
 - Existing deterministic assessment after the final diff, with two revision rounds by default.
 - Exact confirmation packet covering repository, task, branch and fork route, base commit, diff,
   verification, assessment, Draft PR text, all writes, and CI repair budget.
+- Runtime validation of the exact patch digest, target and fork route, Draft-only plan, structural
+  ready-state prerequisites, allowed writes, confirmation text, and CI budget.
+- Exact target-specific confirmation phrase. Plain yes/confirm responses and whitespace-normalized
+  variants are rejected; non-ready publication requires the phrase to acknowledge the decision and
+  the prompt to show its exact reason.
+- A content-bound write-authorization artifact limited to the confirmed repository, base commit,
+  head route, initial diff, Draft PR operations, and repair budget.
 - Explicit treatment of ready, revise, and abstain. Missing production scoring can never be
   represented as ready, although a user may acknowledge the uncertainty and still confirm a Draft
   PR.
 - Draft-only GitHub publication after confirmation, using Codex's connected GitHub tools.
 - Default maximum of two same-scope CI repair rounds, with new verification and assessment after
   each edit.
+- Executable run states for authorized, Draft-open, CI-failed, repairing, and complete. The helper
+  rejects a mismatched base, head route, diff, PR URL or number, normal PR, stale CI commit,
+  exhausted repair budget, unchanged repair diff or commit, and a caller-declared out-of-scope
+  update.
 - New confirmation required for a stale packet or material scope change.
 - Hard prohibitions on default-branch writes, force-push, merge, auto-merge, marking ready for
   review, bulk PRs, and public vulnerability disclosure.
 
-The machine-readable confirmation shape is
-schemas/confirmation_packet.schema.json, with an example in
-examples/confirmation-packet.json.
+The machine-readable confirmation, preparation check, authorization, and workflow-run shapes are in
+schemas/, with an example packet in examples/confirmation-packet.json. The installed Skill wrapper
+is skills/prman/scripts/workflow.py.
 
 ## Implemented quality core
 
@@ -55,6 +66,8 @@ examples/confirmation-packet.json.
   and wheel and sdist checks.
 - Every assessment result keeps external_write_authorized false; only the later human packet can
   authorize the listed operations.
+- Confirmation and workflow CLIs validate transitions without implementing GitHub access or storing
+  credentials.
 
 The archived review that motivated the assessment hardening is
 [security-review-2026-08-29.md](security-review-2026-08-29.md).
@@ -70,6 +83,13 @@ The archived review that motivated the assessment hardening is
 
 These actions stay with Codex and its connected tools, or are intentionally outside PRman's allowed
 workflow.
+
+The local helper cannot cryptographically prove who supplied a confirmation response, that Codex
+actually displayed the packet unchanged, that GitHub or CI observations are true, or that an
+`in_scope` assertion is semantically correct. It fails closed on the structured facts it receives;
+Codex and the connected GitHub service remain the execution and observation boundary. The local
+JSON artifacts are not signed and can be replaced by a process that already has write access to
+them; they are workflow records, not a hostile-host security boundary.
 
 ## Remaining release work
 

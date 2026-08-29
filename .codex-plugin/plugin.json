@@ -1,6 +1,6 @@
 {
   "name": "prman",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Human-confirmed, end-to-end Draft PR automation for Codex",
   "author": {
     "name": "PRman contributors"
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "PRman",
     "shortDescription": "Find, fix, and draft PRs.",
-    "longDescription": "PRman guides Codex from read-only repository discovery through implementation, deterministic quality checks, an exact human confirmation, Draft PR creation, and bounded CI repair. Codex supplies the coding and connected GitHub tools; PRman supplies the workflow and safety boundaries.",
+    "longDescription": "PRman guides Codex from read-only repository discovery through implementation, deterministic quality checks, a content-bound human confirmation, Draft PR creation, and validated CI repair transitions. Codex supplies the coding and connected GitHub tools; PRman supplies the workflow and fail-closed local safety state.",
     "developerName": "PRman contributors",
     "category": "Productivity",
     "capabilities": [

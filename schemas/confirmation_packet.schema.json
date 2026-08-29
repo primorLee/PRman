@@ -20,7 +20,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "prman-confirmation-packet/1.0"
+      "const": "prman-confirmation-packet/1.1"
     },
     "repository": {
       "type": "object",
@@ -29,7 +29,7 @@
       "properties": {
         "full_name": {
           "type": "string",
-          "pattern": "^[^/\\s]+/[^/\\s]+$"
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
         },
         "url": {
           "type": "string",
@@ -70,7 +70,7 @@
       "properties": {
         "repository": {
           "type": "string",
-          "pattern": "^[^/\\s]+/[^/\\s]+$"
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
         },
         "branch": {
           "type": "string",
@@ -84,7 +84,7 @@
     "diff": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sha256", "files", "summary"],
+      "required": ["sha256", "files", "summary", "patch"],
       "properties": {
         "sha256": {
           "$ref": "#/$defs/sha256"
@@ -105,20 +105,8 @@
         "patch": {
           "type": "string",
           "minLength": 1
-        },
-        "artifact_path": {
-          "type": "string",
-          "minLength": 1
         }
-      },
-      "oneOf": [
-        {
-          "required": ["patch"]
-        },
-        {
-          "required": ["artifact_path"]
-        }
-      ]
+      }
     },
     "verification": {
       "type": "array",
@@ -251,7 +239,7 @@
     },
     "external_writes": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 3,
       "uniqueItems": true,
       "items": {
         "enum": [
@@ -262,9 +250,11 @@
           "update_draft_pr"
         ]
       },
-      "contains": {
-        "const": "create_draft_pr"
-      }
+      "allOf": [
+        {"contains": {"const": "create_branch"}},
+        {"contains": {"const": "push_commits"}},
+        {"contains": {"const": "create_draft_pr"}}
+      ]
     },
     "ci_followup": {
       "type": "object",
@@ -291,7 +281,7 @@
     "approval": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "prompt"],
+      "required": ["status", "prompt", "confirmation_phrase"],
       "properties": {
         "status": {
           "const": "pending"
@@ -299,10 +289,103 @@
         "prompt": {
           "type": "string",
           "minLength": 1
+        },
+        "confirmation_phrase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^CONFIRM DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ \\S+(?: ACKNOWLEDGE (?:REVISE|ABSTAIN))?$"
         }
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ci_followup": {
+            "properties": {"publish_repairs": {"const": true}}
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "ci_followup": {
+            "properties": {"max_fix_rounds": {"minimum": 1}}
+          },
+          "external_writes": {
+            "contains": {"const": "update_draft_pr"}
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "ci_followup": {
+            "properties": {"max_fix_rounds": {"const": 0}}
+          },
+          "external_writes": {
+            "not": {"contains": {"const": "update_draft_pr"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "assessment": {
+            "properties": {"decision": {"const": "ready"}}
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "approval": {
+            "properties": {
+              "confirmation_phrase": {
+                "pattern": "^CONFIRM DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ \\S+$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "assessment": {
+            "properties": {"decision": {"const": "revise"}}
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "approval": {
+            "properties": {
+              "confirmation_phrase": {"pattern": " ACKNOWLEDGE REVISE$"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "assessment": {
+            "properties": {"decision": {"const": "abstain"}}
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "approval": {
+            "properties": {
+              "confirmation_phrase": {"pattern": " ACKNOWLEDGE ABSTAIN$"}
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "sha256": {
       "type": "string",
