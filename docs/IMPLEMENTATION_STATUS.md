@@ -113,8 +113,12 @@ them; they are workflow records, not a hostile-host security boundary.
 
 - Run representative repository-discovery tasks and record target selection quality, duplicate-work
   avoidance, and refusal behavior.
-- Exercise the exact confirmation, denial, stale-packet, abstain-acknowledgement, fork, Draft PR, CI
-  success, CI failure, repair-budget, and material-scope-change paths against controlled repositories.
+- Complete the live Draft PR and CI portion of the controlled
+  [confirmation-path validation](confirmation-path-validation-2026-08-30.md). Local denial,
+  stale-packet, Draft-only, and prohibited-operation checks now pass; the first GitHub write still
+  requires the packet-bound user response.
+- Exercise the abstain-acknowledgement, fork, CI failure, repair-budget, and material-scope-change
+  paths against controlled repositories.
 - Integrate and calibrate one external production scorer and trusted evidence executor.
 - Publish scorer conformance tests and adversarial false-ready and fabricated-evidence evaluation.
 - Add a hash-locked, platform-specific dependency lockfile and reproducible runner image.

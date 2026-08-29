@@ -59,17 +59,25 @@ class ConfirmationTests(unittest.TestCase):
                 diff_sha256=grant.initial_diff_sha256,
             )
         )
-        self.assertFalse(
-            grant.allows_initial_write(
-                "merge",
-                repository=grant.repository,
-                base_branch=grant.base_branch,
-                base_commit=grant.base_commit,
-                head_repository=grant.head_repository,
-                head_branch=grant.head_branch,
-                diff_sha256=grant.initial_diff_sha256,
-            )
-        )
+        for operation in (
+            "merge",
+            "auto_merge",
+            "force_push",
+            "mark_ready_for_review",
+            "write_default_branch",
+        ):
+            with self.subTest(operation=operation):
+                self.assertFalse(
+                    grant.allows_initial_write(
+                        operation,
+                        repository=grant.repository,
+                        base_branch=grant.base_branch,
+                        base_commit=grant.base_commit,
+                        head_repository=grant.head_repository,
+                        head_branch=grant.head_branch,
+                        diff_sha256=grant.initial_diff_sha256,
+                    )
+                )
 
     def test_ready_packet_uses_a_target_phrase_without_an_acknowledgement_suffix(self) -> None:
         value = confirmation_value()
@@ -429,6 +437,38 @@ class WorkflowCliTests(unittest.TestCase):
         self.assertEqual(status, 0)
         grant = json.loads(authorized_output.getvalue())
         self.assertTrue(grant["policy"]["external_write_authorized"])
+
+    def test_denied_or_stale_confirmation_writes_no_authorization(self) -> None:
+        packet = ConfirmationPacket.from_dict(confirmation_value())
+        packet_path = ROOT / "examples" / "confirmation-packet.json"
+        cases = (
+            ("no, do not publish", packet.packet_digest, "exactly match"),
+            (packet.confirmation_phrase, "0" * 64, "packet changed"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            authorization_path = Path(directory) / "authorization.json"
+            for response, expected_digest, expected_error in cases:
+                with (
+                    self.subTest(response=response),
+                    contextlib.redirect_stderr(io.StringIO()) as err,
+                ):
+                    status = main(
+                        [
+                            "confirmation",
+                            "authorize",
+                            "--input",
+                            str(packet_path),
+                            "--expected-packet-digest",
+                            expected_digest,
+                            "--response",
+                            response,
+                            "--output",
+                            str(authorization_path),
+                        ]
+                    )
+                self.assertEqual(status, 2)
+                self.assertIn(expected_error, err.getvalue())
+                self.assertFalse(authorization_path.exists())
 
     def test_cli_persists_a_complete_workflow_run(self) -> None:
         grant = authorization()

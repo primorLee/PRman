@@ -21,5 +21,18 @@ Read this reference immediately before any proposed GitHub mutation.
 - If confirmation is missing, ambiguous, denied, or stale, stop with a local handoff.
 - Never place tokens, private payloads, model weights, or raw scorer training data in artifacts.
 
+## Denied, ambiguous, or stale confirmation
+
+Do not run `confirmation authorize` unless the response is the exact phrase for the unchanged
+packet. If an inexact response or stale digest is passed to the helper, it exits unsuccessfully
+before emitting a write-authorization artifact. The absence of an artifact is a hard stop, not a
+reason to retry with normalized text or a reduced write.
+
+Return a local-only handoff containing the selected target, local branch or commit, exact diff and
+digest, verification results, assessment decision, and the reason publication stopped. An explicit
+denial ends the attempt without another confirmation prompt. A stale packet requires updated
+verification and assessment, a newly prepared complete packet, and a fresh exact response before
+the first GitHub write.
+
 Use Codex's connected GitHub tools and approval surfaces. PRman stores no GitHub credential and
 provides no separate network mutation layer.
