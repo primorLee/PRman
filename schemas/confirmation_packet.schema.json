@@ -20,7 +20,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "prman-confirmation-packet/1.1"
+      "const": "prman-confirmation-packet/1.2"
     },
     "repository": {
       "type": "object",
@@ -294,7 +294,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 200,
-          "pattern": "^CONFIRM DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ \\S+(?: ACKNOWLEDGE (?:REVISE|ABSTAIN))?$"
+          "pattern": "^CREATE DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
         }
       }
     }
@@ -325,62 +325,6 @@
           },
           "external_writes": {
             "not": {"contains": {"const": "update_draft_pr"}}
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "assessment": {
-            "properties": {"decision": {"const": "ready"}}
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "approval": {
-            "properties": {
-              "confirmation_phrase": {
-                "pattern": "^CONFIRM DRAFT PR [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ \\S+$"
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "assessment": {
-            "properties": {"decision": {"const": "revise"}}
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "approval": {
-            "properties": {
-              "confirmation_phrase": {"pattern": " ACKNOWLEDGE REVISE$"}
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "assessment": {
-            "properties": {"decision": {"const": "abstain"}}
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "approval": {
-            "properties": {
-              "confirmation_phrase": {"pattern": " ACKNOWLEDGE ABSTAIN$"}
-            }
           }
         }
       }

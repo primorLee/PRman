@@ -19,7 +19,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "prman-write-authorization/1.0"
+      "const": "prman-write-authorization/1.1"
     },
     "packet_digest": {
       "$ref": "#/$defs/sha256"

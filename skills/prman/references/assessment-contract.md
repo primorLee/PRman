@@ -144,5 +144,5 @@ so it abstains until exact calibrated and attestation bindings are explicitly co
 
 Copy the exact decision, reason, test-only state, scorer identity, and attestation state into the
 confirmation packet. Do not treat the assessment result as publication authority. When the result
-abstains only because production scoring or attestation is unavailable, follow the explicit
-uncertainty-acknowledgement path in `github-workflow.md`.
+abstains only because production scoring or attestation is unavailable, follow the plain-language
+uncertainty disclosure in `github-workflow.md`; keep the internal labels out of the default preview.

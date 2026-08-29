@@ -111,10 +111,11 @@ test_only true.
 ### Stale or ambiguous write confirmation
 
 The assessment result always sets external_write_authorized false. Before any GitHub mutation, the
-Skill presents the exact packet and stops. A short affirmative response such as yes or confirm is
-never sufficient. The response must exactly match a phrase naming the repository and head branch;
-for revise or abstain it also names the decision being acknowledged, while the prompt shows the
-exact non-ready reason. Leading or trailing whitespace is not normalized.
+Skill prepares the exact packet, presents a plain-language contribution preview, and stops. A short
+affirmative response such as yes or confirm is never sufficient. The response must exactly match
+`CREATE DRAFT PR OWNER/REPO`. The unchanged internal packet binds the base, branch route, diff, PR
+text, writes, assessment, and CI budget. Any non-ready reason is disclosed in the preview in plain
+language. Leading or trailing whitespace is not normalized.
 
 Changing the repository, base commit, branch route, initial diff, PR title or body, operation list,
 or CI budget before publication invalidates confirmation. After publication, only a repair within

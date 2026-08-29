@@ -2,8 +2,9 @@
 
 ## Decision
 
-PRman is a full pull-request orchestration Skill distributed as a Plugin. Codex remains the only
-coding and tool-execution harness.
+PRman is a contribution workflow Skill distributed as a Plugin for ordinary developers who want to
+make a useful pull request to a well-known open-source project. Codex remains the only coding and
+tool-execution harness.
 
 The product boundary is “PRman directs; Codex acts.” PRman defines repository selection, workflow
 state, evidence requirements, human confirmation, allowed GitHub writes, and CI stopping rules.
@@ -15,16 +16,18 @@ store, or background worker.
 
 ### User goal and authorization
 
-The first request defines repository and task criteria. It authorizes read-only discovery and local
+The first request defines repository and task criteria. A broad request uses safe defaults rather
+than requiring the developer to supply search filters. It authorizes read-only discovery and local
 implementation, but never serves as the final GitHub-write approval. Publication authority is
-granted only after the user sees and confirms the exact post-implementation packet.
+granted only after the user sees and confirms the post-implementation contribution preview.
 
 ### Read-only discovery
 
 The Skill directs Codex to search for a small number of relevant repositories and issues, reject
-unsuitable or duplicate work, and select one contribution-friendly target. It checks activity,
-issue clarity, assignment and existing-PR state, contribution rules, security policy, licensing,
-verification feasibility, default branch, and full base commit.
+unsuitable or duplicate work, and select one contribution-friendly target. By default it prefers a
+recognised, actively maintained project with evidence that outside PRs are reviewed. It checks
+activity, issue clarity, assignment and existing-PR state, contribution rules, security policy,
+licensing, verification feasibility, default branch, and full base commit.
 
 Discovery uses the GitHub MCP dependency declared in skills/prman/agents/openai.yaml. No fork,
 branch, comment, assignment, or other GitHub mutation occurs in this stage.
@@ -47,7 +50,7 @@ default required gates are scope, secrets, and tests. Extra gates are advisory. 
 readiness requires criterion minima, raw and lower-confidence-bound thresholds, acceptable
 uncertainty and truncation, exact scorer metadata binding, and a verified canonical evidence HMAC.
 
-### Confirmation packet
+### Contribution preview and internal confirmation packet
 
 After the final diff is verified and assessed, the Skill prepares a packet containing:
 
@@ -61,14 +64,20 @@ After the final diff is verified and assessed, the Skill prepares a packet conta
 schemas/confirmation_packet.schema.json defines the machine-readable contract. Initial publication
 is valid only for the unchanged packet; later diff updates are limited to its explicit CI repair
 envelope. The assessment result itself always denies external-write authority. The local workflow
-helper validates the packet, returns its canonical digest and target-specific confirmation phrase,
-and creates a scoped authorization only when the response matches that phrase byte-for-byte. A
-non-ready phrase explicitly acknowledges revise or abstain, and its prompt must include the exact
-assessment reason.
+helper validates the packet, returns its canonical digest and the short phrase
+`CREATE DRAFT PR OWNER/REPO`, and creates a scoped authorization only when the response matches that
+phrase byte-for-byte.
+
+The packet and digest stay internal by default. The user sees a contribution preview containing the
+repository and task, selection reason, change summary and files, test results, risks or unknowns,
+Draft PR title, and a reviewable full diff. Internal non-ready states are translated into plain
+language; a known required-check failure is not offered for publication in the default flow.
 
 The authorization artifact and run state have separate schemas. Their parsers recheck the target,
-base, branch and fork route, allowed writes, Draft-only policy, confirmation-phrase digest, and CI
-budget instead of trusting serialized state.
+base, branch and fork route, allowed writes, Draft-only policy, confirmation-scope digest, and CI
+budget instead of trusting serialized state. That internal digest combines the short user phrase
+with the complete packet-bound authorization scope, so shortening the phrase does not drop the
+branch, diff, assessment, or repair-budget binding.
 
 ### GitHub publication and CI follow-up
 
@@ -96,7 +105,7 @@ passing CI reaches complete.
 4. Inspect: load repository rules, task context, base commit, and CI expectations.
 5. Implement: let Codex edit locally and collect observed verification evidence.
 6. Assess: run deterministic gates and optional scoring; revise at most twice by default.
-7. Confirm: display the exact packet and stop for the user's answer.
+7. Confirm: display the simple contribution preview and stop for the user's short answer.
 8. Publish: perform only the confirmed fork, branch, push, and Draft PR operations.
 9. Follow CI: inspect checks and perform bounded in-scope repairs.
 10. Report: return the Draft PR URL, head commit, CI state, assessment, and remaining human work.
@@ -107,9 +116,10 @@ change returns to Confirm. A denied or missing confirmation terminates with a lo
 ## Abstention behavior
 
 Without a production scorer or trusted evidence attestation, required gates can pass while the final
-result remains abstain. PRman must show that uncertainty. The user may still explicitly confirm a
-Draft PR when the abstention is due only to missing production quality infrastructure. A known failed
-required gate is not equivalent and requires a separate, failure-specific override.
+internal result remains abstain. PRman translates that into a plain note that the optional extra
+quality score is unavailable. The user may still explicitly confirm a Draft PR when repository
+checks passed and this is the only uncertainty. A known failed required gate is not equivalent and
+is not offered in the default flow.
 
 ## Package boundary
 

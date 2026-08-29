@@ -1,33 +1,40 @@
 # Implementation status
 
-PRman 0.4.0 is a pre-alpha, end-to-end Draft PR orchestration Skill for Codex. The repository is
-public at primorLee/PRman and licensed under Apache-2.0. The workflow is implemented in the Skill and
-in executable local contracts. Local personal-marketplace installation, fresh-task discovery,
-negative routing, installed helper resolution, and cache-busted reinstall passed on 2026-08-30;
-live GitHub end-to-end validation is still required before a production claim.
+PRman 0.5.0 is a pre-alpha Codex Skill for ordinary developers who want to contribute to well-known
+open-source projects. Its default flow is: find one suitable issue, implement and test it, show a
+simple contribution preview, wait for a short repository-bound confirmation, create a Draft PR, and
+follow CI. Detailed quality and authorization artifacts remain internal. The repository is public
+at primorLee/PRman and licensed under Apache-2.0.
+
+The 0.4.0 Plugin installation and routing checks passed on 2026-08-30. The new 0.5.0 simplified
+experience is implemented in source and local contracts but still needs fresh installed-Plugin and
+live GitHub end-to-end validation before a production claim.
 
 ## Implemented workflow
 
 - Installable Codex Plugin and implicitly discoverable prman Skill.
 - GitHub MCP dependency declared in the Skill metadata; no PRman-owned token or credential store.
-- Read-only repository and issue discovery, small-target comparison, contribution-fit selection,
-  duplicate-work checks, and anti-spam rules.
+- Read-only repository and issue discovery focused by default on one recognised, active,
+  contribution-friendly project, with automatic selection when there is a clear best target.
+- Suitability checks for issue clarity, manageable scope, outside-contributor acceptance,
+  duplicate work, verification feasibility, usefulness, and anti-spam behavior.
 - Inspection of agent instructions, README, contribution and security policies, license, issue
   context, pull-request template, default branch, full base commit, and CI configuration.
 - Codex-native local implementation and execution of repository-prescribed verification.
 - Existing deterministic assessment after the final diff, with two revision rounds by default.
-- Exact confirmation packet covering repository, task, branch and fork route, base commit, diff,
+- A simple user-facing preview covering the selected task, why it was chosen, changed files, tests,
+  risks or unknowns, Draft PR title, and a reviewable full diff.
+- An internal exact packet covering repository, task, branch and fork route, base commit, diff,
   verification, assessment, Draft PR text, all writes, and CI repair budget.
 - Runtime validation of the exact patch digest, target and fork route, Draft-only plan, structural
   ready-state prerequisites, allowed writes, confirmation text, and CI budget.
-- Exact target-specific confirmation phrase. Plain yes/confirm responses and whitespace-normalized
-  variants are rejected; non-ready publication requires the phrase to acknowledge the decision and
-  the prompt to show its exact reason.
+- Short target-specific confirmation phrase: `CREATE DRAFT PR OWNER/REPO`. Plain yes/confirm,
+  a different repository, and whitespace-normalized variants are rejected.
 - A content-bound write-authorization artifact limited to the confirmed repository, base commit,
   head route, initial diff, Draft PR operations, and repair budget.
-- Explicit treatment of ready, revise, and abstain. Missing production scoring can never be
-  represented as ready, although a user may acknowledge the uncertainty and still confirm a Draft
-  PR.
+- Internal treatment of ready, revise, and abstain. These labels are not shown by default. Missing
+  production scoring can never be represented as ready; the preview instead says plainly that the
+  optional extra quality score is unavailable.
 - Draft-only GitHub publication after confirmation, using Codex's connected GitHub tools.
 - Default maximum of two same-scope CI repair rounds, with new verification and assessment after
   each edit.
@@ -73,9 +80,9 @@ is skills/prman/scripts/workflow.py.
 The archived review that motivated the assessment hardening is
 [security-review-2026-08-29.md](security-review-2026-08-29.md).
 
-## Validated Codex installation
+## Previously validated Codex installation
 
-The PRM-008 acceptance run installed PRman from the default local `personal` marketplace and
+The PRM-008 acceptance run validated version 0.4.0 from the default local `personal` marketplace and
 verified all of the following in ephemeral, read-only Codex tasks started outside this repository:
 
 - Explicit `$prman` invocation loaded version `0.4.0` from the Plugin cache.
@@ -85,7 +92,8 @@ verified all of the following in ephemeral, read-only Codex tasks started outsid
 - Uninstall and reinstall with `0.4.0+codex.validation-20260830` produced a new cache entry, and a
   subsequent fresh task reported that exact installed version.
 - Both before and after reinstall, the task rejected a plain yes as write authorization and allowed
-  only an explicitly confirmed Draft PR.
+  only an explicitly confirmed Draft PR. This confirms the safety boundary, not the new 0.5.0
+  wording or preview experience.
 
 The redacted command transcript and exact validation boundary are in
 [plugin-installation-validation-2026-08-30.md](plugin-installation-validation-2026-08-30.md).
@@ -113,11 +121,18 @@ them; they are workflow records, not a hostile-host security boundary.
 
 - Run representative repository-discovery tasks and record target selection quality, duplicate-work
   avoidance, and refusal behavior.
-- Exercise the exact confirmation, denial, stale-packet, abstain-acknowledgement, fork, Draft PR, CI
-  success, CI failure, repair-budget, and material-scope-change paths against controlled repositories.
+- Install version 0.5.0 through the Plugin flow and verify implicit invocation, the simple preview,
+  hidden internal artifacts, and the short `CREATE DRAFT PR OWNER/REPO` confirmation in a fresh
+  Codex task.
+- Complete the live Draft PR and CI portion of the controlled
+  [confirmation-path validation](confirmation-path-validation-2026-08-30.md). Local denial,
+  stale-packet, Draft-only, and prohibited-operation checks now pass; the first GitHub write still
+  requires the packet-bound user response.
+- Exercise the missing-extra-score disclosure, fork, CI failure, repair-budget, and
+  material-scope-change paths against controlled repositories.
 - Integrate and calibrate one external production scorer and trusted evidence executor.
 - Publish scorer conformance tests and adversarial false-ready and fabricated-evidence evaluation.
 - Add a hash-locked, platform-specific dependency lockfile and reproducible runner image.
 
-Until those checks are complete, PRman is a working workflow contract and quality core, not a
-validated autonomous production PR service.
+Until those checks are complete, PRman is a working Skill, workflow contract, and quality core, not
+a validated autonomous production PR service.

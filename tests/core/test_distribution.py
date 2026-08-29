@@ -37,7 +37,7 @@ class DistributionTests(unittest.TestCase):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "prman")
         self.assertEqual(manifest["skills"], "./skills/")
-        self.assertEqual(manifest["version"], "0.4.0")
+        self.assertEqual(manifest["version"], "0.5.0")
         self.assertIn("Write", manifest["interface"]["capabilities"])
         self.assertLessEqual(len(manifest["interface"]["shortDescription"]), 30)
         prompts = manifest["interface"]["defaultPrompt"]
@@ -112,11 +112,8 @@ class DistributionTests(unittest.TestCase):
         }
         ready_packet["approval"] = {
             "status": "pending",
-            "prompt": (
-                "Reply exactly ‘CONFIRM DRAFT PR octo-org/widget "
-                "codex/handle-empty-config’ to create this Draft PR."
-            ),
-            "confirmation_phrase": ("CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config"),
+            "prompt": "Reply exactly ‘CREATE DRAFT PR octo-org/widget’ to create this Draft PR.",
+            "confirmation_phrase": "CREATE DRAFT PR octo-org/widget",
         }
         validator.validate(ready_packet)
 
@@ -162,11 +159,11 @@ class DistributionTests(unittest.TestCase):
         inexact_confirmation["approval"]["confirmation_phrase"] = "yes"
         invalid_packets.append(inexact_confirmation)
 
-        missing_abstain_acknowledgement = copy.deepcopy(packet)
-        missing_abstain_acknowledgement["approval"]["confirmation_phrase"] = (
-            "CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config"
+        verbose_confirmation = copy.deepcopy(packet)
+        verbose_confirmation["approval"]["confirmation_phrase"] = (
+            "CONFIRM DRAFT PR octo-org/widget codex/handle-empty-config ACKNOWLEDGE ABSTAIN"
         )
-        invalid_packets.append(missing_abstain_acknowledgement)
+        invalid_packets.append(verbose_confirmation)
 
         for invalid_packet in invalid_packets:
             with self.subTest(invalid_packet=invalid_packet), self.assertRaises(ValidationError):
