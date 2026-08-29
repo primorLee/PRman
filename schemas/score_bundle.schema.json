@@ -6,9 +6,27 @@
   "additionalProperties": false,
   "required": ["schema_version", "candidate_id", "request_digest", "provider", "scores"],
   "properties": {
-    "schema_version": {"const": "prman-score-bundle/1.0"},
-    "candidate_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "request_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "schema_version": {"const": "prman-score-bundle/1.1"},
+    "candidate_id": {"$ref": "#/$defs/sha256"},
+    "request_digest": {"$ref": "#/$defs/sha256"},
+    "provider": {"$ref": "#/$defs/provider"},
+    "scores": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {"$ref": "#/$defs/correctness"},
+        {"$ref": "#/$defs/task_alignment"},
+        {"$ref": "#/$defs/scope"},
+        {"$ref": "#/$defs/repository_conventions"},
+        {"$ref": "#/$defs/maintainability"},
+        {"$ref": "#/$defs/reviewer_effort"}
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "provider": {
       "type": "object",
       "additionalProperties": false,
@@ -20,21 +38,13 @@
         "calibrator_version"
       ],
       "properties": {
-        "protocol_version": {"const": "prman-scorer-plugin/1.0"},
+        "protocol_version": {"const": "prman-scorer-plugin/1.1"},
         "provider_id": {"type": "string", "minLength": 1},
         "provider_version": {"type": "string", "minLength": 1},
         "model_revision": {"type": "string", "minLength": 1},
         "calibrator_version": {"type": "string", "minLength": 1}
       }
     },
-    "scores": {
-      "type": "array",
-      "minItems": 6,
-      "maxItems": 6,
-      "items": {"$ref": "#/$defs/score"}
-    }
-  },
-  "$defs": {
     "score": {
       "type": "object",
       "additionalProperties": false,
@@ -59,10 +69,55 @@
         },
         "probability": {"type": "number", "minimum": 0, "maximum": 1},
         "uncertainty": {"type": "number", "minimum": 0, "maximum": 1},
-        "evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "actionable_critique": {"type": ["string", "null"]},
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "actionable_critique": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        },
         "ood": {"type": "boolean"}
       }
+    },
+    "correctness": {
+      "allOf": [
+        {"$ref": "#/$defs/score"},
+        {"properties": {"criterion": {"const": "correctness"}}}
+      ]
+    },
+    "task_alignment": {
+      "allOf": [
+        {"$ref": "#/$defs/score"},
+        {"properties": {"criterion": {"const": "task_alignment"}}}
+      ]
+    },
+    "scope": {
+      "allOf": [
+        {"$ref": "#/$defs/score"},
+        {"properties": {"criterion": {"const": "scope"}}}
+      ]
+    },
+    "repository_conventions": {
+      "allOf": [
+        {"$ref": "#/$defs/score"},
+        {"properties": {"criterion": {"const": "repository_conventions"}}}
+      ]
+    },
+    "maintainability": {
+      "allOf": [
+        {"$ref": "#/$defs/score"},
+        {"properties": {"criterion": {"const": "maintainability"}}}
+      ]
+    },
+    "reviewer_effort": {
+      "allOf": [
+        {"$ref": "#/$defs/score"},
+        {"properties": {"criterion": {"const": "reviewer_effort"}}}
+      ]
     }
   }
 }

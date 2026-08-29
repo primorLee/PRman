@@ -12,15 +12,18 @@
     "critical_min",
     "soft_min",
     "ready_score",
+    "ready_lcb_min",
     "revise_floor",
     "ready_uncertainty_max",
     "abstain_uncertainty",
     "top_margin_min",
     "max_context_truncation_ratio",
-    "lcb_uncertainty_weight"
+    "lcb_uncertainty_weight",
+    "scorer_binding",
+    "evidence_attestation"
   ],
   "properties": {
-    "schema_version": {"const": "prman-decision-config/1.0"},
+    "schema_version": {"const": "prman-decision-config/1.1"},
     "required_gates": {
       "type": "array",
       "minItems": 1,
@@ -41,15 +44,98 @@
     "critical_min": {"$ref": "#/$defs/criteria_subset"},
     "soft_min": {"$ref": "#/$defs/criteria_subset"},
     "ready_score": {"$ref": "#/$defs/probability"},
+    "ready_lcb_min": {"$ref": "#/$defs/probability"},
     "revise_floor": {"$ref": "#/$defs/probability"},
     "ready_uncertainty_max": {"$ref": "#/$defs/probability"},
     "abstain_uncertainty": {"$ref": "#/$defs/probability"},
     "top_margin_min": {"$ref": "#/$defs/probability"},
     "max_context_truncation_ratio": {"$ref": "#/$defs/probability"},
-    "lcb_uncertainty_weight": {"type": "number", "minimum": 0}
+    "lcb_uncertainty_weight": {"type": "number", "minimum": 0},
+    "scorer_binding": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/provider"}
+      ]
+    },
+    "evidence_attestation": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/evidence_attestation"}
+      ]
+    }
   },
+  "allOf": [
+    {
+      "oneOf": [
+        {"properties": {"critical_min": {"required": ["correctness"]}}},
+        {"properties": {"soft_min": {"required": ["correctness"]}}}
+      ]
+    },
+    {
+      "oneOf": [
+        {"properties": {"critical_min": {"required": ["task_alignment"]}}},
+        {"properties": {"soft_min": {"required": ["task_alignment"]}}}
+      ]
+    },
+    {
+      "oneOf": [
+        {"properties": {"critical_min": {"required": ["scope"]}}},
+        {"properties": {"soft_min": {"required": ["scope"]}}}
+      ]
+    },
+    {
+      "oneOf": [
+        {"properties": {"critical_min": {"required": ["repository_conventions"]}}},
+        {"properties": {"soft_min": {"required": ["repository_conventions"]}}}
+      ]
+    },
+    {
+      "oneOf": [
+        {"properties": {"critical_min": {"required": ["maintainability"]}}},
+        {"properties": {"soft_min": {"required": ["maintainability"]}}}
+      ]
+    },
+    {
+      "oneOf": [
+        {"properties": {"critical_min": {"required": ["reviewer_effort"]}}},
+        {"properties": {"soft_min": {"required": ["reviewer_effort"]}}}
+      ]
+    }
+  ],
+  "$comment": "Runtime additionally enforces weight sum and numeric ordering between thresholds, which standard JSON Schema cannot compare across sibling properties.",
   "$defs": {
     "probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "provider_id",
+        "provider_version",
+        "model_revision",
+        "calibrator_version"
+      ],
+      "properties": {
+        "protocol_version": {"const": "prman-scorer-plugin/1.1"},
+        "provider_id": {"type": "string", "minLength": 1},
+        "provider_version": {"type": "string", "minLength": 1},
+        "model_revision": {"type": "string", "minLength": 1},
+        "calibrator_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidence_attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "key_id", "hmac_secret_env"],
+      "properties": {
+        "scheme": {"const": "hmac-sha256"},
+        "key_id": {"type": "string", "minLength": 1},
+        "hmac_secret_env": {
+          "type": "string",
+          "pattern": "^[A-Z_][A-Z0-9_]*$"
+        }
+      }
+    },
     "criteria_numbers": {
       "type": "object",
       "additionalProperties": false,

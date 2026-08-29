@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import ipaddress
-import json
+import os
+import secrets
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
@@ -10,12 +13,15 @@ from typing import Any
 from urllib.parse import urlparse
 
 from prman.models import ALL_CRITERIA, CriterionScore, ProviderMetadata, ScoreBundle
-from prman.scorers.protocols import ScorerRequest
+from prman.scorers.protocols import ScorerRequest, ScorerUnavailableError
 from prman.validation import (
+    MAX_JSON_BYTES,
     ContractError,
+    canonical_json_bytes,
     exact_fields,
     load_json,
     parse_json,
+    require_environment_variable,
     require_object,
     require_probability,
     require_string,
@@ -170,6 +176,7 @@ class LocalHttpScorer:
                 "calibrator_version",
                 "endpoint",
                 "timeout_seconds",
+                "hmac_secret_env",
             },
             path="builtin.local-http",
         )
@@ -196,6 +203,18 @@ class LocalHttpScorer:
         ):
             raise ContractError("local scorer timeout_seconds must be in (0, 300]")
         self.timeout_seconds = float(timeout)
+        secret_env = require_environment_variable(
+            options["hmac_secret_env"], path="builtin.local-http.hmac_secret_env"
+        )
+        secret = os.environ.get(secret_env)
+        if secret is None:
+            raise ScorerUnavailableError(
+                f"local scorer HMAC secret environment variable {secret_env!r} is not set"
+            )
+        secret_bytes = secret.encode("utf-8")
+        if len(secret_bytes) < 32:
+            raise ContractError("local scorer HMAC secret must contain at least 32 UTF-8 bytes")
+        self._secret = secret_bytes
         self._opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}),
             _NoRedirectHandler(),
@@ -206,40 +225,67 @@ class LocalHttpScorer:
         return self._metadata
 
     def score(self, request: ScorerRequest) -> ScoreBundle:
-        body = json.dumps(
+        nonce = secrets.token_hex(32)
+        body = canonical_json_bytes(
             {
-                "schema_version": "prman-scorer-service-request/1.0",
+                "schema_version": "prman-scorer-service-request/1.1",
                 "request_digest": request.request_digest,
+                "nonce": nonce,
+                "provider": self.metadata.as_dict(),
                 "request": request.as_dict(),
-            },
-            ensure_ascii=False,
-            allow_nan=False,
-            sort_keys=True,
-        ).encode("utf-8")
+            }
+        )
+        if len(body) > MAX_JSON_BYTES:
+            raise ContractError("local scorer request exceeds 4 MiB")
+        request_signature = hmac.new(
+            self._secret,
+            b"prman-request-v1\0" + body,
+            hashlib.sha256,
+        ).hexdigest()
         http_request = urllib.request.Request(
             self.endpoint,
             data=body,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "X-PRman-Signature": request_signature,
+            },
             method="POST",
         )
         try:
             with self._opener.open(http_request, timeout=self.timeout_seconds) as response:
-                response_body = response.read(4 * 1024 * 1024 + 1)
+                response_body = response.read(MAX_JSON_BYTES + 1)
+                response_signature = response.headers.get("X-PRman-Signature")
+                content_type = response.headers.get_content_type()
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise ContractError(f"local scorer request failed: {exc}") from exc
-        if len(response_body) > 4 * 1024 * 1024:
+            raise ScorerUnavailableError(f"local scorer request failed: {exc}") from exc
+        if len(response_body) > MAX_JSON_BYTES:
             raise ContractError("local scorer response exceeds 4 MiB")
+        if content_type != "application/json":
+            raise ContractError("local scorer response must use application/json")
+        expected_signature = hmac.new(
+            self._secret,
+            b"prman-response-v1\0" + response_body,
+            hashlib.sha256,
+        ).hexdigest()
+        if not isinstance(response_signature, str) or not hmac.compare_digest(
+            response_signature, expected_signature
+        ):
+            raise ContractError("local scorer response signature is missing or invalid")
         raw = parse_json(response_body, path="local scorer response")
         value = require_object(raw, path="scorer_response")
         exact_fields(
             value,
-            {"schema_version", "request_digest", "scores"},
+            {"schema_version", "request_digest", "nonce", "provider", "scores"},
             path="scorer_response",
         )
-        if value["schema_version"] != "prman-scorer-service-response/1.0":
+        if value["schema_version"] != "prman-scorer-service-response/1.1":
             raise ContractError(f"unsupported scorer response {value['schema_version']!r}")
         if value["request_digest"] != request.request_digest:
             raise ContractError("local scorer response request digest mismatch")
+        if value["nonce"] != nonce:
+            raise ContractError("local scorer response nonce mismatch")
+        if ProviderMetadata.from_dict(value["provider"]) != self.metadata:
+            raise ContractError("local scorer response provider identity mismatch")
         raw_scores = value["scores"]
         if not isinstance(raw_scores, list):
             raise ContractError("scorer_response.scores must be an array")

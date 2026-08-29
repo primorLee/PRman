@@ -12,13 +12,14 @@ from prman import __version__
 from prman.assessment import Assessment, AssessmentEngine
 from prman.decision import DecisionConfig
 from prman.scorers.config import load_scorer_config
+from prman.scorers.protocols import ScorerUnavailableError
 from prman.scorers.registry import ScorerRegistry
 from prman.validation import ContractError, load_json
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="prman",
+        prog="prman-codex",
         description="Deterministic assessment helper for the PRman Codex skill.",
     )
     parser.add_argument("--version", action="version", version=__version__)
@@ -57,6 +58,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow static/fixture providers for tests only; never for a readiness claim.",
     )
+    assess.add_argument(
+        "--allow-trusted-python-scorer",
+        action="store_true",
+        help="Execute an external Python entry-point scorer as fully trusted in-process code.",
+    )
     assess.add_argument("--output", type=Path, help="Write JSON here instead of stdout.")
     assess.set_defaults(handler=_assess)
     return parser
@@ -78,7 +84,7 @@ def _scorers_list(args: argparse.Namespace) -> int:
     del args
     registry = ScorerRegistry()
     for name in registry.names():
-        marker = " [test-only]" if registry.is_test_only(name) else ""
+        marker = f" [{registry.trust_classification(name)}]"
         print(f"{name}{marker}")
     return 0
 
@@ -91,21 +97,41 @@ def _assess(args: argparse.Namespace) -> int:
     assessment = Assessment.from_dict(load_json(args.input))
     decision_config = DecisionConfig.from_mapping(load_json(args.decision_config))
     scorer = None
-    test_only = False
+    scorer_failure = None
     if args.allow_test_scorer and args.scorer_config is None:
         raise ContractError("--allow-test-scorer requires a test-only scorer configuration")
+    if args.allow_trusted_python_scorer and args.scorer_config is None:
+        raise ContractError(
+            "--allow-trusted-python-scorer requires an external scorer configuration"
+        )
     if args.scorer_config is not None:
         provider_name, options = load_scorer_config(args.scorer_config)
         registry = ScorerRegistry()
-        test_only = registry.is_test_only(provider_name)
+        classification = registry.trust_classification(provider_name)
+        test_only = classification == "test-only"
         if test_only and not args.allow_test_scorer:
             raise ContractError(
                 f"scorer {provider_name!r} is test-only; pass --allow-test-scorer only in tests"
             )
         if args.allow_test_scorer and not test_only:
             raise ContractError("--allow-test-scorer is valid only for a test-only scorer")
-        scorer = registry.create(provider_name, options)
-    result = AssessmentEngine(decision_config, scorer, test_only=test_only).run(assessment)
+        if args.allow_trusted_python_scorer and classification != "trusted-in-process":
+            raise ContractError(
+                "--allow-trusted-python-scorer is valid only for an external Python scorer"
+            )
+        try:
+            scorer = registry.create(
+                provider_name,
+                options,
+                allow_trusted_python=args.allow_trusted_python_scorer,
+            )
+        except ScorerUnavailableError:
+            scorer_failure = "initialization_failed"
+    result = AssessmentEngine(
+        decision_config,
+        scorer,
+        scorer_failure=scorer_failure,
+    ).run(assessment)
     rendered = _render(result.as_dict())
     if args.output is None:
         sys.stdout.write(rendered)
@@ -123,7 +149,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         return int(args.handler(args))
     except ContractError as exc:
-        print(f"prman: {exc}", file=sys.stderr)
+        print(f"prman-codex: {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:
+        print(f"prman-codex: internal error ({type(exc).__name__})", file=sys.stderr)
         return 2
 
 

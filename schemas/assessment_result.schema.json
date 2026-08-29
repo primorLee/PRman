@@ -8,24 +8,159 @@
     "schema_version",
     "assessment_digest",
     "decision_config_digest",
+    "repository_id",
+    "base_commit",
+    "task_digest",
+    "evidence_attestation",
     "provider",
+    "scorer_error",
     "test_only",
     "evaluations",
     "selection",
     "policy"
   ],
   "properties": {
-    "schema_version": {"const": "prman-assessment-result/1.0"},
-    "assessment_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "decision_config_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "schema_version": {"const": "prman-assessment-result/1.1"},
+    "assessment_digest": {"$ref": "#/$defs/sha256"},
+    "decision_config_digest": {"$ref": "#/$defs/sha256"},
+    "repository_id": {"$ref": "#/$defs/sha256"},
+    "base_commit": {"$ref": "#/$defs/revision"},
+    "task_digest": {"$ref": "#/$defs/sha256"},
+    "evidence_attestation": {"$ref": "#/$defs/evidence_attestation_status"},
     "provider": {
       "oneOf": [
         {"type": "null"},
-        {"$ref": "score_bundle.schema.json#/properties/provider"}
+        {"$ref": "score_bundle.schema.json#/$defs/provider"}
+      ]
+    },
+    "scorer_error": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
       ]
     },
     "test_only": {"type": "boolean"},
-    "evaluations": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "evaluations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/evaluation"}
+    },
+    "selection": {"$ref": "#/$defs/selection"},
+    "policy": {
+      "const": {
+        "human_confirmation_required": true,
+        "draft_only": true,
+        "external_write_authorized": false
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"test_only": {"const": true}}},
+      "then": {
+        "properties": {
+          "selection": {
+            "properties": {
+              "decision": {"const": "abstain"},
+              "candidate_id": {"type": "null"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "selection": {"properties": {"decision": {"const": "ready"}}}
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence_attestation": {"properties": {"verified": {"const": true}}}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "evidence_attestation_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verified", "key_id", "error"],
+      "properties": {
+        "verified": {"type": "boolean"},
+        "key_id": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"verified": {"const": true}}},
+          "then": {
+            "properties": {
+              "key_id": {"type": "string", "minLength": 1},
+              "error": {"type": "null"}
+            }
+          },
+          "else": {"properties": {"error": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "max_uncertainty",
+        "lcb",
+        "provisional_decision",
+        "reasons",
+        "comparable"
+      ],
+      "properties": {
+        "score": {"type": ["number", "null"]},
+        "max_uncertainty": {"type": ["number", "null"]},
+        "lcb": {"type": ["number", "null"]},
+        "provisional_decision": {"enum": ["eligible", "revise", "abstain"]},
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "comparable": {"type": "boolean"}
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_id", "gates", "score_bundle", "aggregate"],
+      "properties": {
+        "candidate_id": {"$ref": "#/$defs/sha256"},
+        "gates": {
+          "type": "array",
+          "items": {"$ref": "assessment.schema.json#/$defs/gate"}
+        },
+        "score_bundle": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "score_bundle.schema.json"}
+          ]
+        },
+        "aggregate": {"$ref": "#/$defs/aggregate"}
+      }
+    },
     "selection": {
       "type": "object",
       "additionalProperties": false,
@@ -35,19 +170,22 @@
         "candidate_id": {
           "oneOf": [
             {"type": "null"},
-            {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            {"$ref": "#/$defs/sha256"}
           ]
         },
         "margin": {"type": ["number", "null"]},
         "reason": {"type": "string", "minLength": 1}
-      }
-    },
-    "policy": {
-      "const": {
-        "human_confirmation_required": true,
-        "draft_only": true,
-        "external_write_authorized": false
-      }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"decision": {"const": "ready"}}},
+          "then": {"properties": {"candidate_id": {"$ref": "#/$defs/sha256"}}}
+        },
+        {
+          "if": {"properties": {"decision": {"const": "abstain"}}},
+          "then": {"properties": {"candidate_id": {"type": "null"}}}
+        }
+      ]
     }
   }
 }

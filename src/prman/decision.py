@@ -3,12 +3,13 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
-from prman.models import ALL_CRITERIA, Decision, GateResult, ScoreBundle
+from prman.models import ALL_CRITERIA, Decision, GateResult, ProviderMetadata, ScoreBundle
 from prman.validation import (
     ContractError,
     exact_fields,
+    require_environment_variable,
     require_object,
     require_probability,
     require_string,
@@ -18,19 +19,51 @@ ProvisionalDecision = Literal["eligible", "revise", "abstain"]
 
 
 @dataclass(frozen=True)
+class EvidenceAttestationPolicy:
+    key_id: str
+    hmac_secret_env: str
+    scheme: str = "hmac-sha256"
+
+    def __post_init__(self) -> None:
+        if self.scheme != "hmac-sha256":
+            raise ContractError(f"unsupported evidence attestation scheme {self.scheme!r}")
+        require_string(self.key_id, path="decision_config.evidence_attestation.key_id")
+        require_environment_variable(
+            self.hmac_secret_env,
+            path="decision_config.evidence_attestation.hmac_secret_env",
+        )
+
+    @classmethod
+    def from_dict(cls, value: Any) -> EvidenceAttestationPolicy:
+        item = require_object(value, path="decision_config.evidence_attestation")
+        exact_fields(
+            item,
+            {"scheme", "key_id", "hmac_secret_env"},
+            path="decision_config.evidence_attestation",
+        )
+        return cls(**item)
+
+    def as_dict(self) -> dict[str, str]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class DecisionConfig:
     required_gates: tuple[str, ...]
     weights: Mapping[str, float]
     critical_min: Mapping[str, float]
     soft_min: Mapping[str, float]
     ready_score: float
+    ready_lcb_min: float
     revise_floor: float
     ready_uncertainty_max: float
     abstain_uncertainty: float
     top_margin_min: float
     max_context_truncation_ratio: float
     lcb_uncertainty_weight: float
-    schema_version: str = "prman-decision-config/1.0"
+    scorer_binding: ProviderMetadata | None
+    evidence_attestation: EvidenceAttestationPolicy | None
+    schema_version: str = "prman-decision-config/1.1"
 
     @classmethod
     def from_mapping(cls, value: Any) -> DecisionConfig:
@@ -45,16 +78,19 @@ class DecisionConfig:
                 "critical_min",
                 "soft_min",
                 "ready_score",
+                "ready_lcb_min",
                 "revise_floor",
                 "ready_uncertainty_max",
                 "abstain_uncertainty",
                 "top_margin_min",
                 "max_context_truncation_ratio",
                 "lcb_uncertainty_weight",
+                "scorer_binding",
+                "evidence_attestation",
             },
             path="decision_config",
         )
-        if item["schema_version"] != "prman-decision-config/1.0":
+        if item["schema_version"] != "prman-decision-config/1.1":
             raise ContractError(f"unsupported decision config {item['schema_version']!r}")
         criteria = item["criteria"]
         if not isinstance(criteria, list) or tuple(criteria) != ALL_CRITERIA:
@@ -95,6 +131,9 @@ class DecisionConfig:
             ready_score=require_probability(
                 item["ready_score"], path="decision_config.ready_score"
             ),
+            ready_lcb_min=require_probability(
+                item["ready_lcb_min"], path="decision_config.ready_lcb_min"
+            ),
             revise_floor=require_probability(
                 item["revise_floor"], path="decision_config.revise_floor"
             ),
@@ -113,6 +152,16 @@ class DecisionConfig:
                 path="decision_config.max_context_truncation_ratio",
             ),
             lcb_uncertainty_weight=float(lcb_weight),
+            scorer_binding=(
+                None
+                if item["scorer_binding"] is None
+                else ProviderMetadata.from_dict(item["scorer_binding"])
+            ),
+            evidence_attestation=(
+                None
+                if item["evidence_attestation"] is None
+                else EvidenceAttestationPolicy.from_dict(item["evidence_attestation"])
+            ),
         )
         config.validate()
         return config
@@ -128,6 +177,8 @@ class DecisionConfig:
             raise ContractError("soft minima contain an unknown criterion")
         if set(self.critical_min) & set(self.soft_min):
             raise ContractError("critical and soft minima cannot overlap")
+        if set(self.critical_min) | set(self.soft_min) != set(ALL_CRITERIA):
+            raise ContractError("critical and soft minima must cover all six criteria")
         for name, number in (
             *self.weights.items(),
             *self.critical_min.items(),
@@ -136,6 +187,7 @@ class DecisionConfig:
             require_probability(number, path=f"decision_config.{name}")
         for name in (
             "ready_score",
+            "ready_lcb_min",
             "revise_floor",
             "ready_uncertainty_max",
             "abstain_uncertainty",
@@ -145,6 +197,20 @@ class DecisionConfig:
             require_probability(getattr(self, name), path=f"decision_config.{name}")
         if self.lcb_uncertainty_weight < 0 or not math.isfinite(self.lcb_uncertainty_weight):
             raise ContractError("LCB uncertainty weight must be finite and non-negative")
+        if self.ready_score < self.revise_floor:
+            raise ContractError("ready_score must be greater than or equal to revise_floor")
+        if not self.revise_floor <= self.ready_lcb_min <= self.ready_score:
+            raise ContractError("ready_lcb_min must be between revise_floor and ready_score")
+        if self.ready_uncertainty_max > self.abstain_uncertainty:
+            raise ContractError("ready_uncertainty_max cannot exceed abstain_uncertainty")
+        if self.scorer_binding is not None and not isinstance(
+            self.scorer_binding, ProviderMetadata
+        ):
+            raise ContractError("scorer_binding must be ProviderMetadata or null")
+        if self.evidence_attestation is not None and not isinstance(
+            self.evidence_attestation, EvidenceAttestationPolicy
+        ):
+            raise ContractError("evidence_attestation must be EvidenceAttestationPolicy or null")
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -155,12 +221,21 @@ class DecisionConfig:
             "critical_min": dict(self.critical_min),
             "soft_min": dict(self.soft_min),
             "ready_score": self.ready_score,
+            "ready_lcb_min": self.ready_lcb_min,
             "revise_floor": self.revise_floor,
             "ready_uncertainty_max": self.ready_uncertainty_max,
             "abstain_uncertainty": self.abstain_uncertainty,
             "top_margin_min": self.top_margin_min,
             "max_context_truncation_ratio": self.max_context_truncation_ratio,
             "lcb_uncertainty_weight": self.lcb_uncertainty_weight,
+            "scorer_binding": (
+                self.scorer_binding.as_dict() if self.scorer_binding is not None else None
+            ),
+            "evidence_attestation": (
+                self.evidence_attestation.as_dict()
+                if self.evidence_attestation is not None
+                else None
+            ),
         }
 
 
@@ -171,6 +246,7 @@ class AggregateResult:
     lcb: float | None
     provisional_decision: ProvisionalDecision
     reasons: tuple[str, ...]
+    comparable: bool
 
     def as_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -213,9 +289,11 @@ class MonotoneDecision:
                 None,
                 "abstain",
                 tuple(f"missing_gate:{name}" for name in missing),
+                False,
             )
+        blocking_gates = tuple(by_name[name] for name in self.config.required_gates)
         fatal = sorted(
-            (gate for gate in gates if gate.status == "fail" and not gate.recoverable),
+            (gate for gate in blocking_gates if gate.status == "fail" and not gate.recoverable),
             key=lambda gate: gate.name,
         )
         if fatal:
@@ -225,8 +303,12 @@ class MonotoneDecision:
                 None,
                 "abstain",
                 tuple(f"hard_gate:{gate.name}:{gate.code}" for gate in fatal),
+                False,
             )
-        unknown = sorted((gate for gate in gates if gate.status == "unknown"), key=lambda g: g.name)
+        unknown = sorted(
+            (gate for gate in blocking_gates if gate.status == "unknown"),
+            key=lambda gate: gate.name,
+        )
         if unknown:
             return AggregateResult(
                 None,
@@ -234,9 +316,10 @@ class MonotoneDecision:
                 None,
                 "abstain",
                 tuple(f"unknown_gate:{gate.name}:{gate.code}" for gate in unknown),
+                False,
             )
         recoverable = sorted(
-            (gate for gate in gates if gate.status == "fail" and gate.recoverable),
+            (gate for gate in blocking_gates if gate.status == "fail" and gate.recoverable),
             key=lambda gate: gate.name,
         )
         if recoverable:
@@ -246,9 +329,17 @@ class MonotoneDecision:
                 None,
                 "revise",
                 tuple(f"hard_gate:{gate.name}:{gate.code}" for gate in recoverable),
+                False,
             )
         if score_bundle is None:
-            return AggregateResult(None, None, None, "abstain", ("scorer_unavailable",))
+            return AggregateResult(
+                None,
+                None,
+                None,
+                "abstain",
+                ("scorer_unavailable",),
+                False,
+            )
 
         score_by_name = {score.criterion: score for score in score_bundle.scores}
         if set(score_by_name) != set(ALL_CRITERIA):
@@ -269,7 +360,14 @@ class MonotoneDecision:
         if truncation_ratio > self.config.max_context_truncation_ratio:
             reasons.append("context_truncation_above_threshold")
         if reasons:
-            return AggregateResult(score, uncertainty, lcb, "abstain", tuple(reasons))
+            return AggregateResult(
+                score,
+                uncertainty,
+                lcb,
+                "abstain",
+                tuple(reasons),
+                False,
+            )
 
         minima = {**self.config.critical_min, **self.config.soft_min}
         minima_failures = sorted(
@@ -278,11 +376,14 @@ class MonotoneDecision:
         if (
             not minima_failures
             and score >= self.config.ready_score
+            and lcb >= self.config.ready_lcb_min
             and uncertainty <= self.config.ready_uncertainty_max
         ):
-            return AggregateResult(score, uncertainty, lcb, "eligible", ())
+            return AggregateResult(score, uncertainty, lcb, "eligible", (), True)
         if minima_failures:
             reasons.append(f"criterion_minimum:{','.join(minima_failures)}")
+        if lcb < self.config.ready_lcb_min:
+            reasons.append("lcb_below_ready_threshold")
         actionable = any(item.actionable_critique for item in score_bundle.scores)
         if score >= self.config.revise_floor and actionable:
             return AggregateResult(
@@ -291,9 +392,10 @@ class MonotoneDecision:
                 lcb,
                 "revise",
                 tuple(reasons or ["actionable"]),
+                True,
             )
         reasons.append("below_revise_or_not_actionable")
-        return AggregateResult(score, uncertainty, lcb, "abstain", tuple(reasons))
+        return AggregateResult(score, uncertainty, lcb, "abstain", tuple(reasons), True)
 
     def finalize(
         self,
@@ -305,22 +407,29 @@ class MonotoneDecision:
             (
                 (candidate_id, result)
                 for candidate_id, result in evaluations
-                if result.lcb is not None
+                if result.lcb is not None and result.comparable
             ),
-            key=lambda item: (-float(item[1].lcb), item[0]),
+            key=lambda item: (-cast(float, item[1].lcb), item[0]),
         )
         if not ranked:
-            revisable = sorted(
+            revisable = [
                 candidate_id
                 for candidate_id, result in evaluations
                 if result.provisional_decision == "revise"
-            )
-            if revisable:
+            ]
+            if len(revisable) == 1:
                 return SelectionResult(
                     "revise",
                     revisable[0],
                     None,
                     "recoverable hard-gate failure",
+                )
+            if len(revisable) > 1:
+                return SelectionResult(
+                    "abstain",
+                    None,
+                    None,
+                    "multiple candidates have recoverable gate failures; no quality ranking exists",
                 )
             reasons = sorted({reason for _, result in evaluations for reason in result.reasons})
             reason = ";".join(reasons) if reasons else "no gate-passed scored candidate"
@@ -342,7 +451,7 @@ class MonotoneDecision:
                 None,
                 "comparison readiness requires a scored runner-up",
             )
-        margin = float(top.lcb) - float(ranked[1][1].lcb)
+        margin = cast(float, top.lcb) - cast(float, ranked[1][1].lcb)
         if margin < self.config.top_margin_min:
             return SelectionResult(
                 "abstain",

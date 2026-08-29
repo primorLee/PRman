@@ -1,9 +1,18 @@
 {
-  "schema_version": "prman-assessment/1.0",
+  "schema_version": "prman-assessment/1.1",
   "mode": "single",
+  "context": {
+    "repository_id": "045a8055bf571a9317f925e707dde50caf4a745b3ed54aeb4e1a9a42853bd949",
+    "base_commit": "c2e1b383a7078e00ca58f4fd899b6df59d704a21",
+    "task": "Update the example greeting",
+    "task_digest": "8900889ce540689cdcfd119ba9e1127314839080379a3bb78fbab0d9e6ce8e69",
+    "repository_rules": ["Keep the example change focused and testable."]
+  },
+  "attestation": null,
   "candidates": [
     {
       "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
+      "diff": "diff --git a/example.txt b/example.txt\nindex 3b18e13..a5b7c12 100644\n--- a/example.txt\n+++ b/example.txt\n@@ -1 +1 @@\n-hello world\n+hello from PRman\n",
       "truncation_ratio": 0.0,
       "gates": [
         {
@@ -11,7 +20,17 @@
           "status": "pass",
           "recoverable": false,
           "code": "WITHIN_REQUESTED_SCOPE",
-          "evidence": {"changed_files": ["example.txt"]},
+          "evidence": {
+            "source": "inspection",
+            "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
+            "observed_at": "2026-08-29T00:00:00Z",
+            "producer": "prman-example",
+            "producer_version": "0.2.0",
+            "summary": "The fixture changes only example.txt.",
+            "log_digest": "f0b8ab916e84ea561bfefddd6ebd509deef30cc9d5c90fa15ff8804ef56ea481",
+            "command": null,
+            "exit_code": null
+          },
           "actionable": null
         },
         {
@@ -19,7 +38,17 @@
           "status": "pass",
           "recoverable": false,
           "code": "NO_SECRET_FINDINGS",
-          "evidence": {"method": "fixture inspection"},
+          "evidence": {
+            "source": "inspection",
+            "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
+            "observed_at": "2026-08-29T00:00:00Z",
+            "producer": "prman-example",
+            "producer_version": "0.2.0",
+            "summary": "The fixture diff contains no credential-like value.",
+            "log_digest": "427eb6524b1a1b6585711d12ac601c8fde770495fab2fb68c69ae4f3deac35b3",
+            "command": null,
+            "exit_code": null
+          },
           "actionable": null
         },
         {
@@ -27,52 +56,20 @@
           "status": "pass",
           "recoverable": false,
           "code": "PASS",
-          "evidence": {"command": ["fixture-test"], "exit_code": 0},
+          "evidence": {
+            "source": "command",
+            "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
+            "observed_at": "2026-08-29T00:00:00Z",
+            "producer": "fixture-test",
+            "producer_version": "1.0.0",
+            "summary": "The deterministic fixture test passed.",
+            "log_digest": "96254336a5b0b2c2667ea89d42f404ecbf57d08384a3b1ae3829c64243134cee",
+            "command": ["fixture-test"],
+            "exit_code": 0
+          },
           "actionable": null
         }
-      ],
-      "scorer_request": {
-        "schema_version": "prman-scorer-request/1.0",
-        "candidate_id": "4332ae57e04a07cdc1a796642b5de1f6367a30487e465f4bfea2757a19d156a7",
-        "payloads": {
-          "correctness": {
-            "criterion": "correctness",
-            "task": {"title": "Update the example greeting"},
-            "candidate": {"changed_files": ["example.txt"]},
-            "evidence": {"tests": "passed"}
-          },
-          "task_alignment": {
-            "criterion": "task_alignment",
-            "task": {"title": "Update the example greeting"},
-            "candidate": {"changed_files": ["example.txt"]},
-            "evidence": {"tests": "passed"}
-          },
-          "scope": {
-            "criterion": "scope",
-            "task": {"title": "Update the example greeting"},
-            "candidate": {"changed_files": ["example.txt"]},
-            "evidence": {"tests": "passed"}
-          },
-          "repository_conventions": {
-            "criterion": "repository_conventions",
-            "task": {"title": "Update the example greeting"},
-            "candidate": {"changed_files": ["example.txt"]},
-            "evidence": {"tests": "passed"}
-          },
-          "maintainability": {
-            "criterion": "maintainability",
-            "task": {"title": "Update the example greeting"},
-            "candidate": {"changed_files": ["example.txt"]},
-            "evidence": {"tests": "passed"}
-          },
-          "reviewer_effort": {
-            "criterion": "reviewer_effort",
-            "task": {"title": "Update the example greeting"},
-            "candidate": {"changed_files": ["example.txt"]},
-            "evidence": {"tests": "passed"}
-          }
-        }
-      }
+      ]
     }
   ]
 }

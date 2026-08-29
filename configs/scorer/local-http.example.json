@@ -6,6 +6,7 @@
     "model_revision": "PIN_EXACT_MODEL_REVISION",
     "calibrator_version": "PIN_EXACT_CALIBRATOR_REVISION",
     "endpoint": "http://127.0.0.1:8081/v1/score",
-    "timeout_seconds": 30
+    "timeout_seconds": 30,
+    "hmac_secret_env": "PRMAN_SCORER_HMAC_SECRET"
   }
 }

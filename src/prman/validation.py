@@ -4,7 +4,8 @@ import hashlib
 import json
 import math
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,31 +15,9 @@ class ContractError(ValueError):
 
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
-_FORBIDDEN_SCORER_FIELDS = frozenset(
-    {
-        "review",
-        "reviews",
-        "review_state",
-        "review_comment",
-        "review_comments",
-        "approval",
-        "approved",
-        "merge",
-        "merged",
-        "merge_state",
-        "revert",
-        "reverted",
-        "author",
-        "author_id",
-        "author_identity",
-        "actor",
-        "maintainer_identity",
-        "selected_candidate",
-        "selection_probability",
-        "model_score",
-        "reward",
-    }
-)
+_REVISION = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+_ENVIRONMENT_VARIABLE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+MAX_JSON_BYTES = 4 * 1024 * 1024
 
 
 def _pairs_without_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -62,11 +41,14 @@ def parse_json(value: str | bytes, *, path: str) -> Any:
         raise ContractError(f"cannot parse JSON from {path}: {exc}") from exc
 
 
-def load_json(path: Path) -> Any:
+def load_json(path: Path, *, max_bytes: int = MAX_JSON_BYTES) -> Any:
     try:
-        value = path.read_bytes()
+        with path.open("rb") as handle:
+            value = handle.read(max_bytes + 1)
     except OSError as exc:
         raise ContractError(f"cannot read JSON from {path}: {exc}") from exc
+    if len(value) > max_bytes:
+        raise ContractError(f"JSON input {path} exceeds {max_bytes} bytes")
     return parse_json(value, path=str(path))
 
 
@@ -121,6 +103,30 @@ def require_sha256(value: Any, *, path: str) -> str:
     return value
 
 
+def require_revision(value: Any, *, path: str) -> str:
+    if not isinstance(value, str) or not _REVISION.fullmatch(value):
+        raise ContractError(f"{path}: expected a lowercase 40- or 64-character Git revision")
+    return value
+
+
+def require_environment_variable(value: Any, *, path: str) -> str:
+    if not isinstance(value, str) or not _ENVIRONMENT_VARIABLE.fullmatch(value):
+        raise ContractError(f"{path}: expected an uppercase environment-variable name")
+    return value
+
+
+def require_timestamp(value: Any, *, path: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ContractError(f"{path}: expected an RFC 3339 timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ContractError(f"{path}: expected an RFC 3339 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ContractError(f"{path}: timestamp must include a UTC offset")
+    return value
+
+
 def require_probability(value: Any, *, path: str) -> float:
     if (
         isinstance(value, bool)
@@ -132,26 +138,5 @@ def require_probability(value: Any, *, path: str) -> float:
     return float(value)
 
 
-def normalize_field(name: str) -> str:
-    normalized = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
-    return re.sub(r"[^a-zA-Z0-9]+", "_", normalized).strip("_").lower()
-
-
-def find_forbidden_scorer_fields(value: Any, *, path: str = "$") -> tuple[str, ...]:
-    findings: list[str] = []
-    if isinstance(value, Mapping):
-        for key, item in value.items():
-            child_path = f"{path}.{key}"
-            if normalize_field(str(key)) in _FORBIDDEN_SCORER_FIELDS:
-                findings.append(child_path)
-            findings.extend(find_forbidden_scorer_fields(item, path=child_path))
-    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        for index, item in enumerate(value):
-            findings.extend(find_forbidden_scorer_fields(item, path=f"{path}[{index}]"))
-    return tuple(findings)
-
-
-def assert_no_forbidden_scorer_fields(value: Any) -> None:
-    findings = find_forbidden_scorer_fields(value)
-    if findings:
-        raise ContractError(f"future/identity fields are forbidden from scorer input: {findings}")
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()

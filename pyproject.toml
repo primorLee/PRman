@@ -1,17 +1,17 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==82.0.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "prman"
-version = "0.1.0"
-description = "Codex-native, scorer-backed readiness decisions for code changes"
+name = "prman-codex"
+version = "0.2.0"
+description = "Pre-alpha evidence-bound assessments for Codex code changes"
 readme = "README.md"
-license = { file = "LICENSE" }
-requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.13"
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -19,11 +19,21 @@ classifiers = [
 ]
 
 [project.scripts]
-prman = "prman.cli:main"
+prman-codex = "prman.cli:main"
 
 [project.optional-dependencies]
 dev = [
-  "ruff>=0.12,<1",
+  "build==1.3.0",
+  "coverage==7.14.1",
+  "jsonschema==4.26.0",
+  "librt==0.15.0; platform_python_implementation != 'PyPy'",
+  "mypy==1.19.1",
+  "mypy-extensions==1.1.0",
+  "packaging==26.3",
+  "pathspec==1.1.1",
+  "pyproject-hooks==1.2.0",
+  "ruff==0.15.12",
+  "typing-extensions==4.16.0",
 ]
 
 [tool.setuptools]
@@ -43,3 +53,36 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 "skills/prman/scripts/assess.py" = ["E402"]
 "tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = [
+  "src/prman/__init__.py",
+  "src/prman/__main__.py",
+  "src/prman/assessment.py",
+  "src/prman/cli.py",
+  "src/prman/decision.py",
+  "src/prman/models.py",
+  "src/prman/validation.py",
+  "src/prman/scorers",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["prman"]
+omit = [
+  "src/prman/agent/*",
+  "src/prman/contracts/*",
+  "src/prman/dataset/*",
+  "src/prman/domain/*",
+  "src/prman/gates/*",
+  "src/prman/github/*",
+  "src/prman/plugins/*",
+  "src/prman/sandbox/*",
+  "src/prman/search/*",
+]
+
+[tool.coverage.report]
+fail_under = 75
+show_missing = true

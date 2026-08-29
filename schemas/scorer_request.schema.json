@@ -4,61 +4,69 @@
   "title": "PRman scorer request",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "candidate_id", "payloads"],
+  "required": ["schema_version", "candidate_id", "context", "criteria"],
   "properties": {
-    "schema_version": {"const": "prman-scorer-request/1.0"},
-    "candidate_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "payloads": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
+    "schema_version": {"const": "prman-scorer-request/1.1"},
+    "candidate_id": {"$ref": "#/$defs/sha256"},
+    "context": {"$ref": "#/$defs/context"},
+    "criteria": {
+      "const": [
         "correctness",
         "task_alignment",
         "scope",
         "repository_conventions",
         "maintainability",
         "reviewer_effort"
-      ],
-      "properties": {
-        "correctness": {"$ref": "#/$defs/correctness"},
-        "task_alignment": {"$ref": "#/$defs/task_alignment"},
-        "scope": {"$ref": "#/$defs/scope"},
-        "repository_conventions": {"$ref": "#/$defs/repository_conventions"},
-        "maintainability": {"$ref": "#/$defs/maintainability"},
-        "reviewer_effort": {"$ref": "#/$defs/reviewer_effort"}
-      }
+      ]
     }
   },
   "$defs": {
-    "correctness": {
-      "type": "object",
-      "required": ["criterion"],
-      "properties": {"criterion": {"const": "correctness"}}
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
     },
-    "task_alignment": {
+    "evidence": {
       "type": "object",
-      "required": ["criterion"],
-      "properties": {"criterion": {"const": "task_alignment"}}
+      "additionalProperties": false,
+      "required": ["gate", "status", "code", "source", "summary", "log_digest"],
+      "properties": {
+        "gate": {"type": "string", "minLength": 1},
+        "status": {"enum": ["pass", "fail", "unknown"]},
+        "code": {"type": "string", "minLength": 1},
+        "source": {"enum": ["command", "inspection", "service"]},
+        "summary": {"type": "string", "minLength": 1},
+        "log_digest": {"$ref": "#/$defs/sha256"}
+      }
     },
-    "scope": {
+    "context": {
       "type": "object",
-      "required": ["criterion"],
-      "properties": {"criterion": {"const": "scope"}}
-    },
-    "repository_conventions": {
-      "type": "object",
-      "required": ["criterion"],
-      "properties": {"criterion": {"const": "repository_conventions"}}
-    },
-    "maintainability": {
-      "type": "object",
-      "required": ["criterion"],
-      "properties": {"criterion": {"const": "maintainability"}}
-    },
-    "reviewer_effort": {
-      "type": "object",
-      "required": ["criterion"],
-      "properties": {"criterion": {"const": "reviewer_effort"}}
+      "additionalProperties": false,
+      "required": [
+        "repository_id",
+        "base_commit",
+        "task",
+        "task_digest",
+        "repository_rules",
+        "diff",
+        "evidence"
+      ],
+      "properties": {
+        "repository_id": {"$ref": "#/$defs/sha256"},
+        "base_commit": {"$ref": "#/$defs/revision"},
+        "task": {"type": "string", "minLength": 1},
+        "task_digest": {"$ref": "#/$defs/sha256"},
+        "repository_rules": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "diff": {"type": "string", "minLength": 1},
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/evidence"}
+        }
+      }
     }
   }
 }

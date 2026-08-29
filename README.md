@@ -1,8 +1,8 @@
 # PRman
 
-PRman is a Codex-native plugin for evidence-backed code-change decisions. Codex performs the coding
-work; PRman supplies a reusable workflow, an optional replaceable scorer boundary, and deterministic
-`ready / revise / abstain` aggregation.
+PRman is a pre-alpha Codex-native framework for evidence-bound code-change assessments. Codex
+performs the coding work; PRman supplies a reusable workflow, an optional scorer boundary, and
+deterministic `ready / revise / abstain` aggregation. It is not a production PR gate.
 
 PRman does **not** implement a second coding agent, candidate generator, worktree manager, command
 sandbox, or GitHub client. Those responsibilities stay with Codex and its existing tools.
@@ -39,12 +39,20 @@ shareable. This follows the official OpenAI documentation for
 
 - Installable plugin manifest at `.codex-plugin/plugin.json`.
 - Focused `prman` Skill with progressive assessment, scorer, and safety references.
-- Strict JSON contracts for assessments, scorer requests, score bundles, and results.
+- Strict JSON contracts for assessments, generated scorer requests, score bundles, and results.
+- Shared repository, base-commit, and task bindings plus verification that each candidate ID hashes
+  the supplied UTF-8 diff and each evidence record names that candidate.
+- Optional HMAC evidence attestation bound to a decision-profile key ID; unattested evidence can
+  never produce `ready`.
 - Required evidence gates that cannot be overridden by a scorer.
-- Six-dimensional weighted geometric aggregation with uncertainty lower confidence bounds.
-- Single-change readiness and optional comparison-margin decisions.
-- Replaceable Python entry-point scorers and a loopback-only local HTTP adapter.
-- Test-only fixture/static scorers that require an explicit CLI opt-in.
+- Six-dimensional weighted geometric aggregation with an absolute readiness LCB floor.
+- Comparison rankings that exclude OOD, excessively uncertain, and truncated candidates.
+- HMAC-authenticated loopback HTTP scoring with request nonces and signed provider identity.
+- Explicitly trusted, in-process Python entry-point scorers for controlled development environments.
+- Test-only fixture/static scorers that require an explicit CLI opt-in and always force the final
+  selection to `abstain`.
+- Exact scorer/model/calibrator binding in the decision profile and structured fail-closed scorer
+  errors.
 - Fixed output policy: human confirmation required, Draft-only, no external write authorized.
 
 No scorer has been trained or downloaded. PRman itself does not create a GitHub issue, branch, or
@@ -52,7 +60,8 @@ pull request as part of an assessment.
 
 ## Development
 
-PRman requires Python 3.11 or newer and has no runtime dependencies.
+PRman supports Python 3.11 and 3.12 and has no runtime dependencies. The distribution and installed
+command are both named `prman-codex`, avoiding the unrelated existing PyPI `prman` package and CLI.
 
 ```bash
 python3.11 -m venv .venv
@@ -62,8 +71,8 @@ make check PYTHON=python
 make demo PYTHON=python
 ```
 
-The demo uses an explicitly marked fixture scorer, emits `"test_only": true`, and must not be used
-as a real readiness claim.
+The demo uses an explicitly marked fixture scorer, emits `"test_only": true`, and deliberately
+returns `abstain`; a fixture can never issue a readiness claim.
 For a fail-closed run without any scorer:
 
 ```bash
@@ -71,7 +80,8 @@ python skills/prman/scripts/assess.py \
   --input examples/assessment.json
 ```
 
-That run returns `abstain` with `scorer_unavailable` after the supplied hard gates pass.
+That run returns `abstain` with `scorer_unavailable:not_configured` after the supplied hard gates
+pass.
 
 ## Using the Skill
 
@@ -84,25 +94,35 @@ Use $prman to implement this issue, verify the change, and assess whether it is 
 Codex may also select the Skill implicitly when a request matches its description. During local
 plugin development, follow the official [plugin usage guide](https://learn.chatgpt.com/docs/plugins).
 
-The Skill prepares an assessment in temporary storage and calls its bundled helper. The helper only
-consumes supplied evidence. It never runs project commands or modifies the target repository.
+The Skill prepares an assessment in temporary storage and calls its bundled helper. The helper
+validates the supplied diff, evidence bindings, and (when configured) a trusted-executor HMAC. It
+never runs project commands or modifies the target repository. A signature authenticates the
+configured executor key; the executor still must truthfully observe commands.
 
 ## Scorer boundary
 
-The production scorer is intentionally replaceable. An external Python distribution may register a
-factory under the `prman.scorers` entry-point group, or a separately deployed scorer may use
-`builtin.local-http` on a numeric loopback address. Both implement
-`prman-scorer-plugin/1.0`.
+The preferred production boundary is a separately deployed scorer using `builtin.local-http` on a
+numeric loopback address. Requests and responses are HMAC signed with a secret read from a named
+environment variable, and responses bind the nonce, request digest, and exact provider metadata.
 
-Without a configured production scorer, PRman abstains. `builtin.static` and
-`builtin.fixture-json` are only for contract and smoke tests. See
+An external Python distribution may also register a factory under the `prman.scorers` entry-point
+group, but that code executes with the full privileges of the PRman process. The CLI will not load it
+without `--allow-trusted-python-scorer`; it is a trusted extension mechanism, not an isolation
+boundary. Both provider forms implement `prman-scorer-plugin/1.1`.
+
+Without a configured scorer, an exact matching `scorer_binding`, and a verified evidence attestation,
+PRman abstains. The checked-in research profile intentionally binds neither a production scorer nor
+an evidence-attestation key.
+`builtin.static` and `builtin.fixture-json` are only for contract and smoke tests. See
 [docs/scorer-protocol.md](docs/scorer-protocol.md).
 
 ## Safety meaning
 
-`ready` means only that supplied gates, configured thresholds, and scorer checks passed. It is not a
-correctness proof, merge recommendation, or write authorization. PRman requires an exact human
-confirmation before Codex uses an existing GitHub tool, and only a Draft PR is in scope.
+`ready` means only that signed bound evidence, configured thresholds including the LCB floor, and an
+exact scorer binding passed. It authenticates configured keys, not the truth or correctness of the
+observations and model. A result is not a correctness proof, merge recommendation, or write
+authorization. PRman requires an exact human confirmation before Codex uses an existing GitHub tool,
+and only a Draft PR is in scope.
 
 See [docs/architecture.md](docs/architecture.md),
 [docs/threat-model.md](docs/threat-model.md), and
