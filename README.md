@@ -7,6 +7,12 @@ deterministic `ready / revise / abstain` aggregation. It is not a production PR 
 PRman does **not** implement a second coding agent, candidate generator, worktree manager, command
 sandbox, or GitHub client. Those responsibilities stay with Codex and its existing tools.
 
+![PRman inputs, gate checks, scoring, aggregation, decisions, outputs, comparison mode, and architecture overview](docs/assets/prman-overview.png)
+
+_Conceptual overview: scorer labels and ecosystem logos illustrate extension possibilities rather
+than bundled integrations or partnerships. PRman 0.2.0 ships no production scorer or calibrated
+decision profile._
+
 ## Shape of the project
 
 ```text
