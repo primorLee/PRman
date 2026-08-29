@@ -1,5 +1,7 @@
 # PRman
 
+![PRman social cover showing the diff, evidence, scorer, and decision flow](docs/assets/prman-social-preview.png)
+
 PRman is a pre-alpha Codex-native framework for evidence-bound code-change assessments. Codex
 performs the coding work; PRman supplies a reusable workflow, an optional scorer boundary, and
 deterministic `ready / revise / abstain` aggregation. It is not a production PR gate.
