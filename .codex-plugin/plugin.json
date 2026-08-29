@@ -1,20 +1,33 @@
 {
   "name": "prman",
-  "version": "0.2.0",
-  "description": "Evidence-backed readiness decisions for code changes made with Codex",
+  "version": "0.3.0",
+  "description": "Human-confirmed, end-to-end Draft PR automation for Codex",
   "author": {
     "name": "PRman contributors"
   },
+  "homepage": "https://github.com/primorLee/PRman",
+  "repository": "https://github.com/primorLee/PRman",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "github",
+    "pull-request",
+    "automation"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "PRman",
-    "shortDescription": "Assess Codex code changes.",
-    "longDescription": "PRman guides Codex through deterministic evidence gates, optional preference scoring, bounded revision, and ready/revise/abstain decisions without replacing the Codex execution environment.",
+    "shortDescription": "Find, fix, and draft PRs.",
+    "longDescription": "PRman guides Codex from read-only repository discovery through implementation, deterministic quality checks, an exact human confirmation, Draft PR creation, and bounded CI repair. Codex supplies the coding and connected GitHub tools; PRman supplies the workflow and safety boundaries.",
     "developerName": "PRman contributors",
     "category": "Productivity",
-    "capabilities": [],
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
     "defaultPrompt": [
-      "Use PRman to assess the current code change and explain whether to revise or abstain."
+      "Use PRman to find a suitable Python issue, implement and verify it, then ask before opening a Draft PR.",
+      "Use PRman to fix this GitHub issue, assess the final diff, and prepare an exact Draft PR confirmation."
     ]
   }
 }

@@ -1,3 +1,13 @@
 interface:
   display_name: "PRman"
-  short_description: "Bound Codex change assessments"
+  short_description: "Find, fix, validate, and draft GitHub PRs"
+  default_prompt: "Use $prman to find a suitable Python issue, implement and validate the fix, then ask before creating a Draft PR."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "github"
+      description: "GitHub MCP server"
+      transport: "streamable_http"
+      url: "https://api.githubcopilot.com/mcp/"
+policy:
+  allow_implicit_invocation: true

@@ -2,154 +2,159 @@
 
 ![PRman social cover showing the diff, evidence, scorer, and decision flow](docs/assets/prman-social-preview.png)
 
-PRman is a pre-alpha Codex-native framework for evidence-bound code-change assessments. Codex
-performs the coding work; PRman supplies a reusable workflow, an optional scorer boundary, and
-deterministic `ready / revise / abstain` aggregation. It is not a production PR gate.
+PRman is a pre-alpha Codex Skill and Plugin for one complete pull-request workflow:
 
-PRman does **not** implement a second coding agent, candidate generator, worktree manager, command
-sandbox, or GitHub client. Those responsibilities stay with Codex and its existing tools.
+~~~text
+User goal
+   |
+   v
+Read-only GitHub search -> choose one suitable repository and issue
+   |
+   v
+Codex reads the rules -> implements the change -> runs the repository's checks
+   |
+   v
+PRman binds the diff and evidence -> ready / revise / abstain
+   |
+   v
+Exact packet: repository + branches + diff + tests + assessment + PR text
+   |
+   v
+User confirms
+   |
+   v
+Create Draft PR -> follow CI -> make bounded in-scope repairs
+~~~
 
-![PRman pipeline from an untrusted target repository through evidence collection, deterministic assessment, authenticated scoring, and human-confirmed external mutation](docs/assets/prman-pipeline-trust-boundaries.png)
+PRman is not another coding model. Codex does the searching, reading, editing, command execution, and
+connected GitHub operations. PRman supplies the state machine, quality gate, confirmation boundary,
+and safe order of operations. It stores no GitHub token and never auto-merges.
 
-_Recommended production topology. The repository ships the PRman core and authenticated HTTP client,
-not the pictured trusted evidence executor or production scorer service. Trusted in-process Python
-scorers remain available only through explicit opt-in. See the
-[visual asset status](docs/visual-assets.md) for what is live versus illustrative._
+## What a user can ask
 
-## Shape of the project
+~~~text
+Use $prman to find an active Python repository with a suitable bug,
+implement and test the fix, then ask me before opening a Draft PR.
+~~~
 
-```text
-Issue or current change
-        |
-        v
-Codex: inspect, edit, run project commands, collect evidence
-        |
-        v
-$prman skill: prepare a strict assessment
-        |
-        +--> optional scorer provider: six criterion probabilities
-        |
-        v
-Deterministic core: hard gates + geometric score + uncertainty LCB
-        |
-        v
-ready / revise / abstain
-        |
-        v
-Human confirmation before any Draft PR write
-```
+PRman searches read-only, selects one contribution-friendly target, checks its AGENTS.md,
+CONTRIBUTING, SECURITY, issue state, and CI rules, then lets Codex implement and verify the smallest
+useful change. It shows the exact proposed write before any GitHub mutation. A reply such as
+“确认” applies only to that unchanged packet.
 
-The Skill is the workflow authoring format. The Plugin manifest makes that workflow installable and
-shareable. This follows the official OpenAI documentation for
-[building skills](https://learn.chatgpt.com/docs/build-skills) and
-[building plugins](https://learn.chatgpt.com/docs/build-plugins).
+After confirmation, PRman may create the listed fork or branch, push the assessed commits, create a
+Draft PR, and follow CI. It can make up to two directly related CI repairs by default. A new
+repository, changed base, changed PR plan, or material scope expansion requires a new confirmation.
 
-## What is implemented
+## What version 0.3.0 implements
 
-- Installable plugin manifest at `.codex-plugin/plugin.json`.
-- Focused `prman` Skill with progressive assessment, scorer, and safety references.
-- Strict JSON contracts for assessments, generated scorer requests, score bundles, and results.
-- Shared repository, base-commit, and task bindings plus verification that each candidate ID hashes
-  the supplied UTF-8 diff and each evidence record names that candidate.
-- Optional HMAC evidence attestation bound to a decision-profile key ID; unattested evidence can
-  never produce `ready`.
-- Required evidence gates that cannot be overridden by a scorer.
-- Six-dimensional weighted geometric aggregation with an absolute readiness LCB floor.
-- Comparison rankings that exclude OOD, excessively uncertain, and truncated candidates.
-- HMAC-authenticated loopback HTTP scoring with request nonces and signed provider identity.
-- Explicitly trusted, in-process Python entry-point scorers for controlled development environments.
-- Test-only fixture/static scorers that require an explicit CLI opt-in and always force the final
-  selection to `abstain`.
-- Exact scorer/model/calibrator binding in the decision profile and structured fail-closed scorer
-  errors.
-- Fixed output policy: human confirmation required, Draft-only, no external write authorized.
+- An installable Plugin manifest and an implicitly discoverable prman Skill.
+- A declared GitHub MCP dependency; PRman reuses the connection managed by Codex.
+- Read-only repository and issue discovery with contribution-fit and anti-spam checks.
+- Repository-instruction, security-policy, existing-PR, base-commit, and CI inspection.
+- Codex-native local implementation and execution of the target repository's own checks.
+- A strict confirmation packet for the exact repository, branch route, diff, verification,
+  assessment, Draft PR text, external writes, and CI budget.
+- Draft-only publication, no default-branch write, no force-push, and no merge or auto-merge.
+- CI monitoring and bounded, same-scope repair commits with reassessment after every edit.
+- The existing assessment 1.1 core: strict JSON contracts, repository/base/task/diff bindings, typed
+  evidence, required and advisory gates, HMAC evidence attestation, optional authenticated scoring,
+  uncertainty-aware aggregation, and deterministic ready / revise / abstain results.
+- Test-only scorers that always force abstain, plus fail-closed scorer errors.
 
-No scorer has been trained or downloaded. PRman itself does not create a GitHub issue, branch, or
-pull request as part of an assessment.
+The confirmation contract is available as
+[schemas/confirmation_packet.schema.json](schemas/confirmation_packet.schema.json), with an
+illustrative [examples/confirmation-packet.json](examples/confirmation-packet.json).
+
+## Current limits
+
+- The full workflow is authored and validated as a Skill, but a clean-install, real-repository,
+  end-to-end Codex run is still release work. Treat this as pre-alpha.
+- No production scorer or trusted evidence executor is shipped. The checked-in research profile
+  therefore cannot honestly return production ready.
+- When required gates pass but production scoring or attestation is missing, PRman reports abstain.
+  The user may still explicitly confirm a Draft PR while acknowledging that uncertainty; PRman must
+  never rename the result to ready.
+- PRman is not a background bot or hosted service. It runs inside the active Codex task and depends
+  on the GitHub tools and permissions available there.
+- It does not do bulk outreach, public vulnerability disclosure, reviewer assignment, comments,
+  approval, merge, auto-merge, or repository administration.
+- Thresholds remain research defaults and are not calibrated for production gating.
+
+## Quality gate inside the workflow
+
+![PRman quality pipeline from an untrusted target repository through evidence collection, deterministic assessment, authenticated scoring, and human-confirmed external mutation](docs/assets/prman-pipeline-trust-boundaries.png)
+
+The Python helper validates an exact UTF-8 diff and its evidence. Required gates run before scoring
+and cannot be overridden by a model. A production ready additionally requires an exact scorer
+binding, an absolute lower-confidence-bound floor, and a verified evidence attestation.
+
+The preferred scorer boundary is an HMAC-authenticated loopback HTTP service. Fully trusted Python
+entry-point scorers are available only through explicit opt-in. Fixture and static providers exist
+for tests and demos and can never issue a readiness claim. See
+[docs/scorer-protocol.md](docs/scorer-protocol.md).
+
+Ready means “eligible to ask the user,” not “correct,” “approved,” or “authorized to publish.”
+Every assessment result keeps external_write_authorized false; authority comes only from the later
+human confirmation packet.
+
+## Skill and Plugin shape
+
+The Skill contains the workflow and its progressively loaded references. The Plugin makes that Skill
+installable and declares the connected GitHub tool it needs. This follows the official OpenAI
+documentation for [building skills](https://learn.chatgpt.com/docs/build-skills),
+[building plugins](https://learn.chatgpt.com/docs/build-plugins), and
+[agent approvals](https://learn.chatgpt.com/docs/agent-approvals-security).
+
+The Python distribution and installed command are both named prman-codex, avoiding the unrelated
+existing PyPI prman project.
 
 ## Development
 
-PRman supports Python 3.11 and 3.12 and has no runtime dependencies. The distribution and installed
-command are both named `prman-codex`, avoiding the unrelated existing PyPI `prman` package and CLI.
+PRman supports Python 3.11 and 3.12 and has no runtime dependencies.
 
-```bash
+~~~bash
 python3.11 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e '.[dev]'
 make check PYTHON=python
 make demo PYTHON=python
-```
+~~~
 
-The demo uses an explicitly marked fixture scorer, emits `"test_only": true`, and deliberately
-returns `abstain`; a fixture can never issue a readiness claim.
+The demo intentionally uses a fixture scorer and returns abstain:
+
+~~~bash
+python skills/prman/scripts/assess.py \
+  --input examples/assessment.json \
+  --scorer-config configs/scorer/fixture.example.json \
+  --allow-test-scorer
+~~~
+
 For a fail-closed run without any scorer:
 
-```bash
+~~~bash
 python skills/prman/scripts/assess.py \
   --input examples/assessment.json
-```
-
-That run returns `abstain` with `scorer_unavailable:not_configured` after the supplied hard gates
-pass.
-
-## Using the Skill
-
-After installing the plugin through a supported Codex plugin source, invoke it explicitly:
-
-```text
-Use $prman to implement this issue, verify the change, and assess whether it is ready for a Draft PR.
-```
-
-Codex may also select the Skill implicitly when a request matches its description. During local
-plugin development, follow the official [plugin usage guide](https://learn.chatgpt.com/docs/plugins).
-
-The Skill prepares an assessment in temporary storage and calls its bundled helper. The helper
-validates the supplied diff, evidence bindings, and (when configured) a trusted-executor HMAC. It
-never runs project commands or modifies the target repository. A signature authenticates the
-configured executor key; the executor still must truthfully observe commands.
-
-## Scorer boundary
-
-The preferred production boundary is a separately deployed scorer using `builtin.local-http` on a
-numeric loopback address. Requests and responses are HMAC signed with a secret read from a named
-environment variable, and responses bind the nonce, request digest, and exact provider metadata.
-
-An external Python distribution may also register a factory under the `prman.scorers` entry-point
-group, but that code executes with the full privileges of the PRman process. The CLI will not load it
-without `--allow-trusted-python-scorer`; it is a trusted extension mechanism, not an isolation
-boundary. Both provider forms implement `prman-scorer-plugin/1.1`.
-
-Without a configured scorer, an exact matching `scorer_binding`, and a verified evidence attestation,
-PRman abstains. The checked-in research profile intentionally binds neither a production scorer nor
-an evidence-attestation key.
-`builtin.static` and `builtin.fixture-json` are only for contract and smoke tests. See
-[docs/scorer-protocol.md](docs/scorer-protocol.md).
-
-## Safety meaning
-
-`ready` means only that signed bound evidence, configured thresholds including the LCB floor, and an
-exact scorer binding passed. It authenticates configured keys, not the truth or correctness of the
-observations and model. A result is not a correctness proof, merge recommendation, or write
-authorization. PRman requires an exact human confirmation before Codex uses an existing GitHub tool,
-and only a Draft PR is in scope.
+~~~
 
 See [docs/architecture.md](docs/architecture.md),
 [docs/threat-model.md](docs/threat-model.md), and
-[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md). Visuals and mockups are cataloged in
+[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the exact implementation
+boundary. Visuals and mockups are cataloged in
 [docs/visual-assets.md](docs/visual-assets.md).
 
 ## Repository map
 
-- `.codex-plugin/`: installable plugin metadata.
-- `skills/prman/`: Codex workflow, references, and bundled helper.
-- `src/prman/`: deterministic assessment library and scorer adapters.
-- `configs/`: decision thresholds and scorer configuration examples.
-- `docs/assets/`: public diagrams, brand references, and clearly separated mockups.
-- `schemas/`: public JSON contracts.
-- `examples/`: fixture-only smoke input and scorer output.
-- `tests/core/`: unit, safety, distribution, CLI, and Skill-wrapper tests.
+- .codex-plugin/: installable Plugin metadata.
+- skills/prman/: full Codex workflow, safety rules, references, and bundled assessment helper.
+- src/prman/: deterministic assessment library and scorer adapters.
+- schemas/: assessment and confirmation JSON contracts.
+- configs/: decision thresholds and scorer configuration examples.
+- examples/: fixture-only assessment, scorer, diff, and confirmation-packet examples.
+- docs/assets/: public diagrams, brand references, and clearly separated mockups.
+- tests/core/: unit, safety, distribution, CLI, schema, and Skill contract tests.
 
 ## License and repository
 
 PRman is available under the [Apache License 2.0](LICENSE). The canonical repository is
-[`primorLee/PRman`](https://github.com/primorLee/PRman).
+[primorLee/PRman](https://github.com/primorLee/PRman).

@@ -141,3 +141,8 @@ Fixture/static runs are marked `test_only` and always select `abstain`. A result
 human confirmation is required, only a Draft PR is eligible, and no external write has been
 authorized. The checked-in decision profile binds neither a production scorer nor an executor key,
 so it abstains until exact calibrated and attestation bindings are explicitly configured.
+
+Copy the exact decision, reason, test-only state, scorer identity, and attestation state into the
+confirmation packet. Do not treat the assessment result as publication authority. When the result
+abstains only because production scoring or attestation is unavailable, follow the explicit
+uncertainty-acknowledgement path in `github-workflow.md`.

@@ -1,65 +1,87 @@
 # Implementation status
 
-PRman `0.2.0` is a pre-alpha assessment-contract framework. The repository is public at
-`primorLee/PRman` and licensed under Apache-2.0. It is not approved for production PR gating.
+PRman 0.3.0 is a pre-alpha, end-to-end Draft PR orchestration Skill for Codex. The repository is
+public at primorLee/PRman and licensed under Apache-2.0. The workflow is implemented in the Skill and
+its contracts; clean-install and live GitHub end-to-end validation are still required before a
+release claim.
 
-## Implemented
+## Implemented workflow
 
-- Codex Plugin and focused `prman` Skill with progressive references.
+- Installable Codex Plugin and implicitly discoverable prman Skill.
+- GitHub MCP dependency declared in the Skill metadata; no PRman-owned token or credential store.
+- Read-only repository and issue discovery, small-target comparison, contribution-fit selection,
+  duplicate-work checks, and anti-spam rules.
+- Inspection of agent instructions, README, contribution and security policies, license, issue
+  context, pull-request template, default branch, full base commit, and CI configuration.
+- Codex-native local implementation and execution of repository-prescribed verification.
+- Existing deterministic assessment after the final diff, with two revision rounds by default.
+- Exact confirmation packet covering repository, task, branch and fork route, base commit, diff,
+  verification, assessment, Draft PR text, all writes, and CI repair budget.
+- Explicit treatment of ready, revise, and abstain. Missing production scoring can never be
+  represented as ready, although a user may acknowledge the uncertainty and still confirm a Draft
+  PR.
+- Draft-only GitHub publication after confirmation, using Codex's connected GitHub tools.
+- Default maximum of two same-scope CI repair rounds, with new verification and assessment after
+  each edit.
+- New confirmation required for a stale packet or material scope change.
+- Hard prohibitions on default-branch writes, force-push, merge, auto-merge, marking ready for
+  review, bulk PRs, and public vulnerability disclosure.
+
+The machine-readable confirmation shape is
+schemas/confirmation_packet.schema.json, with an example in
+examples/confirmation-packet.json.
+
+## Implemented quality core
+
 - Duplicate-safe JSON parsing with a 4 MiB input limit.
-- Assessment `1.1` bindings for repository ID, base commit, task text/digest, supplied diff, candidate
-  digest, and candidate-specific typed evidence.
-- Passing test evidence requires command, zero exit code, candidate ID, timestamp, producer/version,
-  and log digest.
-- Readiness requires a canonical assessment HMAC from the executor key fixed by the decision profile;
-  missing or invalid evidence attestations cannot produce `ready`.
-- Core-generated allowlisted scorer requests; arbitrary caller-provided criterion payloads were
-  removed.
+- Assessment 1.1 bindings for repository ID, base commit, task text and digest, supplied diff,
+  candidate digest, and candidate-specific typed evidence.
+- Passing test evidence requires command, zero exit code, candidate ID, timestamp,
+  producer/version, and log digest.
+- Production readiness requires a canonical assessment HMAC from the executor key fixed by the
+  decision profile; missing or invalid evidence attestations cannot produce ready.
+- Core-generated allowlisted scorer requests; callers cannot supply arbitrary criterion payloads.
 - Required blocking gates and non-blocking advisory gates, with actionable recoverable failures.
-- Six-criterion canonical score order, geometric aggregation, absolute readiness LCB floor, minima,
-  uncertainty/truncation limits, and comparison margin.
+- Six-criterion geometric aggregation, criterion minima, absolute lower-confidence-bound floor,
+  uncertainty and truncation limits, and comparison margin.
 - OOD, excessively uncertain, and excessively truncated candidates excluded from comparison.
-- Provider/model/calibrator metadata pinned for the whole assessment and bound to the decision
-  profile.
-- HMAC-authenticated numeric-loopback HTTP scoring with nonces, signed identity, proxy/redirect
-  disabling, timeout, and request/response size caps.
-- External Python scorer entry points classified as fully trusted in-process code and gated by an
-  explicit CLI opt-in.
-- Test-only provider identity derived in the core; fixture/static selections always force `abstain`.
-- Scorer exceptions and malformed output converted to structured fail-closed results.
-- Runtime/JSON-Schema consistency tests, schema positive and negative cases, type checking, branch
-  coverage threshold, HTTP signature tests, and wheel/sdist CI checks.
-- Fixed output policy: human confirmation required, Draft-only, no external write authorized.
+- Provider/model/calibrator metadata pinned for the assessment and decision profile.
+- HMAC-authenticated numeric-loopback HTTP scoring with nonces, signed identity, proxy and redirect
+  disabling, timeout, and request and response size caps.
+- Trusted in-process Python entry-point scorers behind explicit CLI opt-in.
+- Test-only provider classification; fixture and static selections always force abstain.
+- Provider failures and malformed output converted to structured fail-closed results.
+- Runtime and JSON-Schema consistency tests, type checking, branch coverage, HTTP signature tests,
+  and wheel and sdist checks.
+- Every assessment result keeps external_write_authorized false; only the later human packet can
+  authorize the listed operations.
 
-The archived review that motivated this hardening is
-[`security-review-2026-08-29.md`](security-review-2026-08-29.md).
+The archived review that motivated the assessment hardening is
+[security-review-2026-08-29.md](security-review-2026-08-29.md).
 
 ## Deliberately not implemented
 
-- Coding-agent or candidate-generation abstraction.
-- Git worktree orchestration.
-- Podman or other command sandbox.
-- Repository test, lint, type-check, or security command runner.
+- A second coding model, coding-agent protocol, candidate-generation runtime, or background daemon.
+- PRman-owned Git worktrees, command sandbox, shell runner, GitHub client, GitHub App, or secrets.
+- Bulk issue outreach, bulk PR creation, reviewer assignment, comments, approval, merge, auto-merge,
+  or repository administration.
 - Scorer training, dataset ingestion, model downloads, or model loading.
-- GitHub credentials, GitHub App, branch push, issue mutation, or pull-request creation.
-- MCP server or custom UI.
+- A custom UI or hosted PRman service.
 
-Codex provides repository execution and existing GitHub tools. An MCP scorer should be added only if
-a future deployed scorer requires a shared tool interface.
+These actions stay with Codex and its connected tools, or are intentionally outside PRman's allowed
+workflow.
 
-## Known limitations and remaining release work
+## Remaining release work
 
-- No production scorer or trusted evidence executor is configured or shipped. The checked-in research
-  decision profile has both `scorer_binding: null` and `evidence_attestation: null`, so it cannot
-  produce a production readiness claim.
-- Thresholds are research defaults and are not calibrated for production use.
-- Evidence attestation authenticates possession of the configured executor key, not whether the
-  executor truthfully ran a command or observed the claimed repository state.
-- HMAC authenticates the local scorer service key, not model execution or host integrity.
-- Trusted Python scorers have full in-process privileges and no enforceable timeout; untrusted
-  scorers require an externally restricted service/container.
-- Adversarial false-ready evaluation, scorer conformance certification, external calibration,
-  representative clean-task plugin installation, and end-to-end Draft PR confirmation testing remain
-  required before any production-gate claim.
-- Action dependencies are exactly pinned and the supported Python range matches CI, but the project
-  still lacks a hash-locked, platform-specific dependency lockfile and reproducible runner image.
+- Install or update the Plugin in a clean Codex environment and verify explicit and implicit
+  invocation.
+- Run representative repository-discovery tasks and record target selection quality, duplicate-work
+  avoidance, and refusal behavior.
+- Exercise the exact confirmation, denial, stale-packet, abstain-acknowledgement, fork, Draft PR, CI
+  success, CI failure, repair-budget, and material-scope-change paths against controlled repositories.
+- Integrate and calibrate one external production scorer and trusted evidence executor.
+- Publish scorer conformance tests and adversarial false-ready and fabricated-evidence evaluation.
+- Add a hash-locked, platform-specific dependency lockfile and reproducible runner image.
+
+Until those checks are complete, PRman is a working workflow contract and quality core, not a
+validated autonomous production PR service.

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import tomllib
 import unittest
 
+import yaml
 from helpers import ROOT, decision_config, score_bundle, scorer_request
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry, Resource
@@ -34,12 +36,33 @@ class DistributionTests(unittest.TestCase):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "prman")
         self.assertEqual(manifest["skills"], "./skills/")
+        self.assertEqual(manifest["version"], "0.3.0")
+        self.assertIn("Write", manifest["interface"]["capabilities"])
         self.assertLessEqual(len(manifest["interface"]["shortDescription"]), 30)
         prompts = manifest["interface"]["defaultPrompt"]
         self.assertIsInstance(prompts, list)
         self.assertLessEqual(len(prompts), 3)
         self.assertTrue(all(isinstance(prompt, str) and len(prompt) <= 128 for prompt in prompts))
         self.assertTrue((ROOT / "skills" / "prman" / "SKILL.md").is_file())
+
+    def test_skill_declares_connected_github_dependency(self) -> None:
+        metadata = yaml.safe_load(
+            (ROOT / "skills" / "prman" / "agents" / "openai.yaml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            metadata["dependencies"]["tools"],
+            [
+                {
+                    "type": "mcp",
+                    "value": "github",
+                    "description": "GitHub MCP server",
+                    "transport": "streamable_http",
+                    "url": "https://api.githubcopilot.com/mcp/",
+                }
+            ],
+        )
+        self.assertTrue(metadata["policy"]["allow_implicit_invocation"])
+        self.assertIn("$prman", metadata["interface"]["default_prompt"])
 
     def test_python_distribution_has_a_non_conflicting_name(self) -> None:
         project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -53,6 +76,74 @@ class DistributionTests(unittest.TestCase):
         skill = (ROOT / "skills" / "prman" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: prman", skill)
         self.assertNotIn("[TODO:", skill)
+
+        linked_references = set(re.findall(r"\]\((references/[^)]+)\)", skill))
+        required_references = {
+            "references/assessment-contract.md",
+            "references/github-workflow.md",
+            "references/orchestration.md",
+            "references/safety.md",
+            "references/scorer-contract.md",
+        }
+        self.assertLessEqual(required_references, linked_references)
+        for reference in linked_references:
+            with self.subTest(reference=reference):
+                self.assertTrue((ROOT / "skills" / "prman" / reference).is_file())
+
+    def test_confirmation_packet_contract_is_draft_only_and_bounded(self) -> None:
+        schema = json.loads(
+            (ROOT / "schemas" / "confirmation_packet.schema.json").read_text(encoding="utf-8")
+        )
+        packet = json.loads(
+            (ROOT / "examples" / "confirmation-packet.json").read_text(encoding="utf-8")
+        )
+        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        validator.validate(packet)
+
+        ready_packet = copy.deepcopy(packet)
+        ready_packet["assessment"] = {
+            "decision": "ready",
+            "reason": "All bound gates and production readiness requirements passed.",
+            "scorer": "production.example",
+            "test_only": False,
+            "attestation_verified": True,
+            "override_acknowledgement_required": False,
+        }
+        validator.validate(ready_packet)
+
+        invalid_packets = []
+        normal_pr = copy.deepcopy(packet)
+        normal_pr["pull_request"]["draft"] = False
+        invalid_packets.append(normal_pr)
+
+        merge_write = copy.deepcopy(packet)
+        merge_write["external_writes"].append("merge")
+        invalid_packets.append(merge_write)
+
+        excessive_ci_budget = copy.deepcopy(packet)
+        excessive_ci_budget["ci_followup"]["max_fix_rounds"] = 3
+        invalid_packets.append(excessive_ci_budget)
+
+        hidden_abstention = copy.deepcopy(packet)
+        hidden_abstention["assessment"]["override_acknowledgement_required"] = False
+        invalid_packets.append(hidden_abstention)
+
+        false_ready = copy.deepcopy(ready_packet)
+        false_ready["assessment"]["scorer"] = None
+        false_ready["assessment"]["attestation_verified"] = False
+        invalid_packets.append(false_ready)
+
+        test_only_ready = copy.deepcopy(ready_packet)
+        test_only_ready["assessment"]["test_only"] = True
+        invalid_packets.append(test_only_ready)
+
+        missing_exact_diff = copy.deepcopy(packet)
+        del missing_exact_diff["diff"]["patch"]
+        invalid_packets.append(missing_exact_diff)
+
+        for invalid_packet in invalid_packets:
+            with self.subTest(invalid_packet=invalid_packet), self.assertRaises(ValidationError):
+                validator.validate(invalid_packet)
 
     def test_security_review_is_archived(self) -> None:
         review = ROOT / "docs" / "security-review-2026-08-29.md"
@@ -167,11 +258,16 @@ class DistributionTests(unittest.TestCase):
             for line in (ROOT / "github_issues.jsonl").read_text(encoding="utf-8").splitlines()
             if line.strip()
         ]
+        milestones = yaml.safe_load((ROOT / "milestones.yaml").read_text(encoding="utf-8"))
+        milestone_names = {
+            f"{milestone['id']} {milestone['title']}" for milestone in milestones["milestones"]
+        }
         identifiers = [issue["external_id"] for issue in issues]
         self.assertEqual(len(identifiers), len(set(identifiers)))
         known = set(identifiers)
         for issue in issues:
             self.assertLessEqual(set(issue["depends_on"]), known)
+            self.assertIn(issue["milestone"], milestone_names)
 
 
 if __name__ == "__main__":

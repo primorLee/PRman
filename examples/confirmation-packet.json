@@ -1,0 +1,72 @@
+{
+  "schema_version": "prman-confirmation-packet/1.0",
+  "repository": {
+    "full_name": "octo-org/widget",
+    "url": "https://github.com/octo-org/widget",
+    "selection_reason": "The issue is open, scoped, unassigned, and covered by the repository test suite."
+  },
+  "task": {
+    "title": "Handle empty configuration files",
+    "url": "https://github.com/octo-org/widget/issues/42",
+    "summary": "Return the documented default configuration when the input file is empty."
+  },
+  "base": {
+    "branch": "main",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "head": {
+    "repository": "contributor/widget",
+    "branch": "codex/handle-empty-config",
+    "fork_required": true
+  },
+  "diff": {
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "files": [
+      "src/widget/config.py",
+      "tests/test_config.py"
+    ],
+    "summary": "Handle empty input and add a regression test.",
+    "patch": "diff --git a/src/widget/config.py b/src/widget/config.py\n--- a/src/widget/config.py\n+++ b/src/widget/config.py\n@@ -1 +1,2 @@\n+DEFAULT = {}\n"
+  },
+  "verification": [
+    {
+      "name": "unit tests",
+      "command": "python -m pytest tests/test_config.py",
+      "status": "passed",
+      "summary": "12 tests passed.",
+      "log_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "assessment": {
+    "decision": "abstain",
+    "reason": "Required gates passed, but no production scorer or trusted evidence attestation is configured.",
+    "scorer": null,
+    "test_only": false,
+    "attestation_verified": false,
+    "override_acknowledgement_required": true
+  },
+  "pull_request": {
+    "draft": true,
+    "title": "Handle empty configuration files",
+    "body": "Fixes #42. Adds the documented fallback and a regression test.",
+    "base_branch": "main",
+    "head_branch": "codex/handle-empty-config"
+  },
+  "external_writes": [
+    "create_fork",
+    "create_branch",
+    "push_commits",
+    "create_draft_pr",
+    "update_draft_pr"
+  ],
+  "ci_followup": {
+    "monitor": true,
+    "max_fix_rounds": 2,
+    "publish_repairs": true,
+    "scope": "Only repairs directly required for issue #42 and the confirmed diff."
+  },
+  "approval": {
+    "status": "pending",
+    "prompt": "Confirm creating this Draft PR despite the disclosed abstain result and allow up to two in-scope CI repair updates?"
+  }
+}

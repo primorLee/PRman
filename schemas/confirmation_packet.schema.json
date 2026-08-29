@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prman.dev/schemas/confirmation_packet.schema.json",
+  "title": "PRman confirmation packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "repository",
+    "task",
+    "base",
+    "head",
+    "diff",
+    "verification",
+    "assessment",
+    "pull_request",
+    "external_writes",
+    "ci_followup",
+    "approval"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "prman-confirmation-packet/1.0"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full_name", "url", "selection_reason"],
+      "properties": {
+        "full_name": {
+          "type": "string",
+          "pattern": "^[^/\\s]+/[^/\\s]+$"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "selection_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "url", "summary"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": ["string", "null"],
+          "format": "uri"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "base": {
+      "$ref": "#/$defs/ref"
+    },
+    "head": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "branch", "fork_required"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[^/\\s]+/[^/\\s]+$"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fork_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "diff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "files", "summary"],
+      "properties": {
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["patch"]
+        },
+        {
+          "required": ["artifact_path"]
+        }
+      ]
+    },
+    "verification": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "command", "status", "summary", "log_digest"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "command": {
+            "type": ["string", "null"]
+          },
+          "status": {
+            "enum": ["passed", "failed", "not_run"]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "log_digest": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/sha256"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "reason",
+        "scorer",
+        "test_only",
+        "attestation_verified",
+        "override_acknowledgement_required"
+      ],
+      "properties": {
+        "decision": {
+          "enum": ["ready", "revise", "abstain"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scorer": {
+          "type": ["string", "null"]
+        },
+        "test_only": {
+          "type": "boolean"
+        },
+        "attestation_verified": {
+          "type": "boolean"
+        },
+        "override_acknowledgement_required": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "ready"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "scorer": {
+                "type": "string",
+                "minLength": 1
+              },
+              "test_only": {
+                "const": false
+              },
+              "attestation_verified": {
+                "const": true
+              },
+              "override_acknowledgement_required": {
+                "const": false
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "override_acknowledgement_required": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "pull_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["draft", "title", "body", "base_branch", "head_branch"],
+      "properties": {
+        "draft": {
+          "const": true
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_branch": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "external_writes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "create_fork",
+          "create_branch",
+          "push_commits",
+          "create_draft_pr",
+          "update_draft_pr"
+        ]
+      },
+      "contains": {
+        "const": "create_draft_pr"
+      }
+    },
+    "ci_followup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["monitor", "max_fix_rounds", "publish_repairs", "scope"],
+      "properties": {
+        "monitor": {
+          "const": true
+        },
+        "max_fix_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "publish_repairs": {
+          "type": "boolean"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "prompt"],
+      "properties": {
+        "status": {
+          "const": "pending"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "commit"],
+      "properties": {
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    }
+  }
+}

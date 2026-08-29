@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prman-codex"
-version = "0.2.0"
-description = "Pre-alpha evidence-bound assessments for Codex code changes"
+version = "0.3.0"
+description = "Pre-alpha end-to-end Draft PR automation for Codex"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -31,6 +31,7 @@ dev = [
   "mypy-extensions==1.1.0",
   "packaging==26.3",
   "pathspec==1.1.1",
+  "PyYAML==6.0.3",
   "pyproject-hooks==1.2.0",
   "ruff==0.15.12",
   "typing-extensions==4.16.0",
